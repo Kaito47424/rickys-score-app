@@ -27,6 +27,29 @@ git push origin feature/your-feature-name
 - `main` へのマージは `develop` からのみ（直接PRは禁止）
 - CIが通っていること（型チェック・ビルド）
 
+### 要件番号とブランチ・PRの対応
+
+ブランチ名とPRタイトルは `docs/requirements.md` の番号に合わせる。
+
+```
+# 単一要件
+feature/2-7-url-separation
+feature/2-2-bat-pitch-stats-api
+
+# 関連する複数要件をまとめる場合（同一ブランチ・同一PRも可）
+feature/2-2-2-11-pitch-stats
+```
+
+PRタイトル例:
+
+```
+feat: [2-7] URL分離（入力/閲覧）
+feat: [2-2][2-11] getBatStats/getPitchStats API追加・投手成績-問題の修正
+fix:  [2-11] 投手個人成績の登板数・防御率が-になる問題
+```
+
+> 複数要件を1つのブランチ・PRにまとめる場合は、要件同士の依存関係がある・変更範囲が重複するなど理由がある場合に限る。
+
 ## コミットメッセージ規則
 
 ```
