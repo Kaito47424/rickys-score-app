@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { GameInfo } from '../../types'
 import { fetchGames, postToGas } from '../../api/gas'
-import StatsModal from '../Stats'
 
 type Props = { onSelect: (game: GameInfo) => void }
 
@@ -21,7 +20,6 @@ export default function GameSelect({ onSelect }: Props) {
   const [error, setError]       = useState('')
   const [showForm, setShowForm] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
-  const [showStats, setShowStats] = useState(false)
   const [date, setDate]         = useState(new Date().toISOString().slice(0, 10))
   const [opponent, setOpponent] = useState('')
   const [creating, setCreating] = useState(false)
@@ -58,13 +56,6 @@ export default function GameSelect({ onSelect }: Props) {
           <h1 className="text-xl font-bold text-blue-700">Rickys スコア入力</h1>
           <p className="text-xs text-gray-400">草野球成績管理</p>
         </div>
-        <button
-          onClick={() => setShowStats(true)}
-          className="flex items-center gap-1 px-3 py-2 bg-blue-50 text-blue-700 rounded-xl text-sm font-bold active:bg-blue-100 border border-blue-200"
-        >
-          <span>📊</span>
-          <span>個人成績</span>
-        </button>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-4 overflow-hidden">
@@ -163,7 +154,6 @@ export default function GameSelect({ onSelect }: Props) {
         </div>
       )}
 
-      {showStats && <StatsModal onClose={() => setShowStats(false)} />}
     </div>
   )
 }
