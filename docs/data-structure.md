@@ -1,5 +1,9 @@
 # データ構造定義書
 
+## スプレッドシート
+
+**URL:** https://docs.google.com/spreadsheets/d/1dgSjqcdEoYIsaqFf0Z3AajfbwvRxofZNFIQEbYJugT0/edit?gid=1681864964#gid=1681864964
+
 ## スプレッドシート シート一覧
 
 | シート名 | 用途 |
