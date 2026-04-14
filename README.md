@@ -80,9 +80,9 @@ feature/{要件番号}-{概要}
 
 | 環境 | URL | ブランチ | 用途 |
 |---|---|---|---|
-| 本番 | score-app-indol.vercel.app | `main` | メンバーが実際に使う |
-| STG | stg-rickys-score-app.vercel.app | `develop` | 結合確認・レビュー用 |
-| ローカル | localhost:5173 | 各 `feature/` ブランチ | 個人開発・動作確認 |
+| 本番 | https://score-app-indol.vercel.app | `main` | メンバーが実際に使う |
+| STG | https://stg-rickys-score-app.vercel.app | `develop` | 結合確認・レビュー用 |
+| ローカル | http://localhost:5173 | 各 `feature/` ブランチ | 個人開発・動作確認 |
 | PR Preview | 自動発行URL | 各 `feature/` ブランチ | PRレビュー時の確認 |
 
 > STG環境のVercelダッシュボード設定手順は「デプロイ手順」セクションを参照。
