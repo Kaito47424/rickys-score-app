@@ -78,6 +78,23 @@ docs: 要件定義書にフェーズ3を追記
   - `gas/rickys-api.gs`（GAS API追加・変更）
 - `app/src/App.tsx` の変更は影響範囲が広いため要注意
 
+## 動作確認フロー
+
+| ステップ | 環境 | URL | タイミング |
+|----------|------|-----|-----------|
+| 1 | ローカル | localhost:5173 | 実装中・自分の担当機能を確認 |
+| 2 | PR Preview | 自動発行URL | featureブランチpush後・PRレビュー時 |
+| 3 | STG | stg-rickys-score-app.vercel.app | developマージ後・結合確認 |
+| 4 | 本番 | score-app-indol.vercel.app | mainマージ後・最終確認 |
+
+```
+feature push → PR Preview で確認
+      ↓ developにマージ
+STG（stg-rickys-score-app.vercel.app）で結合確認
+      ↓ 問題なければ mainにマージ
+本番（score-app-indol.vercel.app）に反映
+```
+
 ## ローカル開発環境セットアップ
 
 ```bash

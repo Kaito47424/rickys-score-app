@@ -76,6 +76,17 @@ feature/{要件番号}-{概要}
 - **2-7（URL分離）は最初に単独でマージすること**（ルーティング構造を先に確定させる）
 - 詳細は `docs/onboarding.md` を参照
 
+## 環境一覧
+
+| 環境 | URL | ブランチ | 用途 |
+|---|---|---|---|
+| 本番 | score-app-indol.vercel.app | `main` | メンバーが実際に使う |
+| STG | stg-rickys-score-app.vercel.app | `develop` | 結合確認・レビュー用 |
+| ローカル | localhost:5173 | 各 `feature/` ブランチ | 個人開発・動作確認 |
+| PR Preview | 自動発行URL | 各 `feature/` ブランチ | PRレビュー時の確認 |
+
+> STG環境のVercelダッシュボード設定手順は「デプロイ手順」セクションを参照。
+
 ## ローカル起動手順
 
 ```bash
@@ -119,6 +130,32 @@ cp app/.env.example app/.env.local
    - **Output Directory**: `dist`
 3. 環境変数 `VITE_GAS_URL` を Vercel のプロジェクト設定に追加
 4. `main` ブランチへのプッシュで自動デプロイ
+
+### Vercel STG環境のセットアップ（ダッシュボード手順）
+
+コードでは設定できないため、Vercelダッシュボードで以下を手動設定する。
+
+**① ブランチ設定**
+
+Vercel ダッシュボード → プロジェクト設定 → Git
+
+- **Production Branch**: `main`
+- **Preview Branches**: `develop` を追加
+
+**② STG固定URLの設定**
+
+Vercel ダッシュボード → プロジェクト設定 → Domains
+
+- `stg-rickys-score-app.vercel.app` を `develop` ブランチに割り当て
+
+**③ 環境変数の設定**
+
+Vercel ダッシュボード → プロジェクト設定 → Environment Variables
+
+| 変数名 | 環境 | 値 |
+|--------|------|----|
+| `VITE_GAS_URL` | Production（`main`） | 本番GASのURL |
+| `VITE_GAS_URL` | Preview（`develop`） | 本番GASと同じURL（GAS・スプシ共用） |
 
 ### Vercel 再デプロイ（GAS URL更新時）
 
