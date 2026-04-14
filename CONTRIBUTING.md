@@ -24,8 +24,8 @@ git push origin feature/your-feature-name
 
 - `develop` に向けてPRを作成
 - レビュー1名以上必須
-- `main` へのマージは `develop` からのみ（直接PRは禁止）
-- CIが通っていること（型チェック・ビルド）
+- `main` へのマージは `develop` からのみ（直接PRは禁止）・2人の合意のうえで実施
+- CIが通っていること（型チェック・ビルド: `.github/workflows/ci.yml`）
 
 ### 要件番号とブランチ・PRの対応
 
