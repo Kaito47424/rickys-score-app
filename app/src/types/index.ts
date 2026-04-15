@@ -37,6 +37,28 @@ export type ModalTarget = { order: number; tab: 'batter' | 'pitcher' } | null
 export type BatStat = Record<string, string | number>
 export type PitchStat = Record<string, string | number>
 
+export type EditLogEntry = {
+  timestamp: string
+  gameId: string
+  editType: 'batter' | 'pitcher'
+  inning: string
+  round: string
+  order: string
+  oldValue: string
+  newValue: string
+}
+
+export type LogEditPayload = {
+  type: 'logEdit'
+  gameId: string
+  editType: 'batter' | 'pitcher'
+  inning: number
+  round: number
+  order: number
+  oldValue: string
+  newValue: string
+}
+
 export type PitcherRunStat = { name: string; r: number; er: number }
 
 export type GameData = {

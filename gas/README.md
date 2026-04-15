@@ -7,6 +7,40 @@
 | `rickys-api.gs` | スマホアプリ用Web API（doGet / doPost） |
 | `main.gs` | スプレッドシート管理ツール（メニュー・エクスポート等） |
 
+## clasp セットアップ（初回のみ・開発者ごとに必要）
+
+clasp を使うとローカルから `npm run deploy` 一発でGASへのコード反映＋デプロイができます。
+
+### 前提: GASプロジェクトへの編集権限
+
+Kaitoに依頼して、自分のGoogleアカウントをGASプロジェクトの編集者として追加してもらう。
+
+> Kaito側の手順: スプレッドシート → 拡張機能 → Apps Script → 右上「共有」→ 相手のGmailを編集者として追加
+
+### セットアップ手順
+
+```bash
+# 1. claspをインストール（グローバル）
+npm install -g @google/clasp
+
+# 2. Googleアカウントで認証（ブラウザが開くのでログインする）
+clasp login
+```
+
+認証後、以下のURLを開いて「Google Apps Script API」をオンにする:
+https://script.google.com/home/usersettings
+
+### 使い方
+
+```bash
+cd gas
+
+npm run deploy   # コード反映 + デプロイまで一発（通常はこれだけ）
+npm run push     # コード反映のみ（デプロイしない場合）
+```
+
+---
+
 ## GASへの追加手順（初回）
 
 1. [Googleスプレッドシート](https://sheets.google.com) を開く
