@@ -14,11 +14,12 @@ function doGet(e) {
 
   try {
     switch (action) {
-      case 'getGames':    result = _getGames();     break;
-      case 'getPlayers':  result = _getPlayers();   break;
-      case 'getBatStats': result = _getBatStats();  break;
-      case 'getPitchStats': result = _getPitchStats(); break;
-      case 'getGameData': result = _getGameData(e.parameter.gameId); break;
+      case 'getGames':      result = _getGames();                            break;
+      case 'getPlayers':    result = _getPlayers();                          break;
+      case 'getBatStats':   result = _getBatStats();                         break;
+      case 'getPitchStats': result = _getPitchStats();                       break;
+      case 'getGameData':   result = _getGameData(e.parameter.gameId);       break;
+      case 'getEditLog':    result = _getEditLog(e.parameter.gameId || null); break;
       default:
         result = { error: `Unknown action: ${action}` };
     }
@@ -44,6 +45,7 @@ function doPost(e) {
     switch (data.type) {
       case 'createGame': _apiCreateGame(data); break;
       case 'inning':     _apiInning(data);     break;
+      case 'logEdit':    _logEdit(data);        break;
       default:
         return ContentService.createTextOutput(`{"error":"Unknown type: ${data.type}"}`)
           .setMimeType(ContentService.MimeType.JSON);
@@ -282,6 +284,53 @@ function _apiInning(data) {
       _writePitcherStats(oppSheet, data.pitcherStats || []);
     }
   }
+}
+
+// ==================== 修正履歴 ====================
+
+// EDIT_LOG シートのカラム定義
+// A: timestamp / B: gameId / C: editType / D: inning / E: round / F: order / G: oldValue / H: newValue
+const EDIT_LOG_SHEET = 'EDIT_LOG';
+const EDIT_LOG_HEADERS = ['timestamp', 'gameId', 'editType', 'inning', 'round', 'order', 'oldValue', 'newValue'];
+
+function _logEdit(data) {
+  const { gameId, editType, inning, round, order, oldValue, newValue } = data;
+  if (!gameId || !editType) throw new Error('gameId / editType が必要です');
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(EDIT_LOG_SHEET);
+
+  // シートが存在しない場合は作成してヘッダを設定
+  if (!sheet) {
+    sheet = ss.insertSheet(EDIT_LOG_SHEET);
+    sheet.getRange(1, 1, 1, EDIT_LOG_HEADERS.length).setValues([EDIT_LOG_HEADERS]);
+  }
+
+  const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+  sheet.appendRow([timestamp, gameId, editType, inning ?? '', round ?? '', order ?? '', oldValue ?? '', newValue ?? '']);
+}
+
+function _getEditLog(gameId) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(EDIT_LOG_SHEET);
+  if (!sheet) return [];
+
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 2) return [];
+
+  const headers = data[0].map(h => String(h).trim());
+  const rows = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    if (!row[0]) continue;
+    const obj = {};
+    headers.forEach((h, j) => { obj[h] = row[j] instanceof Date ? _formatDate(row[j]) : String(row[j]); });
+    // gameId が指定されている場合はフィルタ
+    if (gameId && obj.gameId !== gameId) continue;
+    rows.push(obj);
+  }
+  // 新しい順に返す
+  return rows.reverse();
 }
 
 // ==================== 書き込みヘルパー ====================
