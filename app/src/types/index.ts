@@ -31,7 +31,7 @@ export type InningState = {
 }
 
 export type AllInningData = Record<string, InningState>
-export type Page = 'gameSelect' | 'orderEdit' | 'inputMain'
+export type Page = 'gameSelect' | 'orderEdit' | 'inputMain' | 'editLog'
 export type ModalTarget = { order: number; tab: 'batter' | 'pitcher' } | null
 
 export type BatStat = Record<string, string | number>

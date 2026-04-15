@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { GameInfo } from '../../types'
 import { fetchGames, postToGas } from '../../api/gas'
 
-type Props = { onSelect: (game: GameInfo) => void }
+type Props = { onSelect: (game: GameInfo) => void; onEditLog: () => void }
 
 const GUIDE_STEPS = [
   '試合を選択（または新規作成）',
@@ -14,7 +14,7 @@ const GUIDE_STEPS = [
   '全イニング送信したら完了',
 ]
 
-export default function GameSelect({ onSelect }: Props) {
+export default function GameSelect({ onSelect, onEditLog }: Props) {
   const [games, setGames]       = useState<GameInfo[]>([])
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState('')
@@ -85,12 +85,20 @@ export default function GameSelect({ onSelect }: Props) {
         )}
       </div>
 
-      <button
-        onClick={() => setShowForm(v => !v)}
-        className="w-full py-3 mb-4 bg-blue-600 text-white rounded-xl font-bold text-base active:bg-blue-700"
-      >
-        ＋ 新規試合を作成
-      </button>
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setShowForm(v => !v)}
+          className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold text-base active:bg-blue-700"
+        >
+          ＋ 新規試合を作成
+        </button>
+        <button
+          onClick={onEditLog}
+          className="px-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm active:bg-gray-200"
+        >
+          修正履歴
+        </button>
+      </div>
 
       {showForm && (
         <div className="bg-white rounded-xl p-4 mb-5 shadow">
