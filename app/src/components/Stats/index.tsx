@@ -3,13 +3,13 @@ import type { BatStat, PitchStat } from '../../types'
 import { fetchBatStats, fetchPitchStats } from '../../api/gas'
 
 const BAT_COLS  = ['選手名', '試合数', '打席', '打数', '安打', '打率', '本塁打', '打点', '得点', '盗塁', 'OPS'] as const
-const PIT_COLS  = ['選手名', '登板数', '投球回', '被安打', '奪三振', '四球', '失点', '自責点', '防御率'] as const
+const PIT_COLS  = ['選手名', '登板試合数', '投球回', '被安打', '奪三振', '四球', '失点', '自責点', '防御率(ERA)'] as const
 
 function fmt(v: string | number, col: string): string {
   if (v === null || v === undefined || v === '') return '—'
   const n = Number(v)
   if (isNaN(n)) return String(v)
-  if (['打率', 'OPS', '防御率'].includes(col)) return n.toFixed(3)
+  if (['打率', 'OPS', '防御率(ERA)'].includes(col)) return n.toFixed(3)
   return String(v)
 }
 
