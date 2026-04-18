@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { BatStat, PitchStat } from '../../types'
-import { fetchBatStats, fetchPitchStats } from '../../api/gas'
+import { fetchBatStats, fetchPitchStats, fetchGames } from '../../api/gas'
 
 const BAT_COLS  = ['選手名', '試合数', '打席', '打数', '安打', '打率', '本塁打', '打点', '得点', '盗塁', 'OPS'] as const
 const PIT_COLS  = ['選手名', '登板試合数', '投球回', '被安打', '奪三振', '四球', '失点', '自責点', '防御率(ERA)'] as const
@@ -21,24 +21,46 @@ export default function StatsPage() {
   const [pitchLoading, setPitchLoading] = useState(false)
   const [batError, setBatError]     = useState('')
   const [pitchError, setPitchError] = useState('')
+  const [yearFilter, setYearFilter] = useState<string>('all')
+  const [availableYears, setAvailableYears] = useState<string[]>([])
 
   useEffect(() => {
+    loadGames()
     loadBat()
   }, [])
 
+  useEffect(() => {
+    if (yearFilter === 'all') {
+      loadBat()
+      loadPitch()
+    } else {
+      // 年度フィルタが選択された場合、その年度の成績を取得
+      // 現在はキャリア成績のみ対応しているため、バックエンド対応が必要
+      loadBat()
+      loadPitch()
+    }
+  }, [yearFilter])
+
+  const loadGames = () => {
+    fetchGames()
+      .then(data => {
+        const years = new Set(data.map(g => g.gameDate.substring(0, 4)))
+        setAvailableYears(['all', ...Array.from(years).sort().reverse()])
+      })
+      .catch(() => console.error('試合一覧の取得に失敗しました'))
+  }
+
   const loadBat = () => {
-    if (batStats.length > 0 || batLoading) return
     setBatLoading(true)
-    fetchBatStats()
+    fetchBatStats(yearFilter === 'all' ? undefined : yearFilter)
       .then(setBatStats)
       .catch(() => setBatError('野手成績の取得に失敗しました'))
       .finally(() => setBatLoading(false))
   }
 
   const loadPitch = () => {
-    if (pitchStats.length > 0 || pitchLoading) return
     setPitchLoading(true)
-    fetchPitchStats()
+    fetchPitchStats(yearFilter === 'all' ? undefined : yearFilter)
       .then(setPitchStats)
       .catch(() => setPitchError('投手成績の取得に失敗しました'))
       .finally(() => setPitchLoading(false))
@@ -69,6 +91,22 @@ export default function StatsPage() {
             {t === 'bat' ? '野手成績' : '投手成績'}
           </button>
         ))}
+      </div>
+
+      {/* 年度フィルタ */}
+      <div className="bg-white border-b px-4 py-2 flex items-center gap-2 flex-none">
+        <label className="text-sm text-gray-600">年度:</label>
+        <select
+          value={yearFilter}
+          onChange={(e) => setYearFilter(e.target.value)}
+          className="text-sm border border-gray-300 rounded px-2 py-1 bg-white"
+        >
+          {availableYears.map(year => (
+            <option key={year} value={year}>
+              {year === 'all' ? '全年度' : `${year}年度`}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* コンテンツ */}

@@ -16,8 +16,8 @@ function doGet(e) {
     switch (action) {
       case 'getGames':      result = _getGames();                            break;
       case 'getPlayers':    result = _getPlayers();                          break;
-      case 'getBatStats':   result = _getBatStats();                         break;
-      case 'getPitchStats': result = _getPitchStats();                       break;
+      case 'getBatStats':   result = _getBatStats(e.parameter.year);         break;
+      case 'getPitchStats': result = _getPitchStats(e.parameter.year);       break;
       case 'getGameData':   result = _getGameData(e.parameter.gameId);       break;
       case 'getEditLog':    result = _getEditLog(e.parameter.gameId || null); break;
       default:
@@ -115,9 +115,10 @@ function _getPlayers() {
   return players;
 }
 
-function _getBatStats() {
+function _getBatStats(year) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName('BAT_STATS_CAREER');
+  const sheetName = year ? `BAT_STATS_${year}` : 'BAT_STATS_CAREER';
+  const sheet = ss.getSheetByName(sheetName);
   if (!sheet) return [];
 
   const data = sheet.getDataRange().getValues();
@@ -135,9 +136,10 @@ function _getBatStats() {
   return rows;
 }
 
-function _getPitchStats() {
+function _getPitchStats(year) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName('PITCH_STATS_CAREER');
+  const sheetName = year ? `PITCH_STATS_${year}` : 'PITCH_STATS_CAREER';
+  const sheet = ss.getSheetByName(sheetName);
   if (!sheet) return [];
 
   const data = sheet.getDataRange().getValues();
