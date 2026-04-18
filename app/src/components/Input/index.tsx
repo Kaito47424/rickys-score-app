@@ -239,7 +239,7 @@ export default function InputMain({
           if (mainTab === 'batter') {
             const entry = normEntry(current.batterResults[orderStr])
             const rbi = current.rbiData[orderStr] ?? { rbi: 0, runs: 0, sb: 0 }
-            const isSubActive = r.subFromInning !== null && r.subFromInning <= inning
+            const isSubActive = r.subFromInning != null && r.subFromInning <= inning
             const displayName = isSubActive ? r.subName : r.name
             const showSubInput = subInputOrder === r.order
 

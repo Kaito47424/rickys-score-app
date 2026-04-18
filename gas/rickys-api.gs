@@ -157,10 +157,22 @@ function _getPitchStats() {
 
 function _getGameData(gameId) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const gameMap = _buildGameMap(ss);
-  const gameInfo = gameMap[gameId];
-  if (!gameInfo) return { error: 'game not found' };
-  const { date, opponent } = gameInfo;
+  // 試合マスタから該当試合の情報を取得
+  const gameMasterSheet = ss.getSheetByName('試合マスタ');
+  if (!gameMasterSheet) return { error: 'game master not found' };
+  const gameMasterData = gameMasterSheet.getDataRange().getValues();
+  let date = null;
+  let opponent = '';
+  for (let i = 1; i + 1 < gameMasterData.length; i += 2) {
+    const gid = String(gameMasterData[i][0]).trim();
+    if (gid !== gameId) continue;
+    date = gameMasterData[i][1];
+    const topTeam  = String(gameMasterData[i][3]).trim();
+    const botTeam  = String(gameMasterData[i + 1][3]).trim();
+    opponent = topTeam === 'Rickys' ? botTeam : topTeam;
+    break;
+  }
+  if (!date) return { error: 'game not found' };
   const dateTag = String(date instanceof Date
     ? Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyyMMdd')
     : date).replace(/[\/\-]/g, '');
@@ -192,10 +204,12 @@ function _getGameData(gameId) {
       for (let o = 1; o <= 9; o++) {
         const row = DATA_START + (o-1)*ROWS - 1;
         const raw = String(batData[row]?.[col-1]||'').trim();
+        // 純粋な数値は集計式の値なのでスキップ
+        if (!raw || /^-?\d+(\.\d+)?$/.test(raw)) continue;
         if (raw.includes('/')) {
           const [code, runCode] = raw.split('/');
           batterResults[key][o] = { code: code.trim(), runCode: runCode.trim() || null };
-        } else if (raw) {
+        } else {
           batterResults[key][o] = { code: raw, runCode: null };
         }
       }
@@ -242,7 +256,121 @@ function _getGameData(gameId) {
       }
     }
   }
-  return { roster, batterResults, pitcherResults, rbiData, pitcherStats };
+
+  // スコアボード（試合マスタから取得）
+  const scoreboard = { rickys: [], opponent: [], total: { rickys: 0, opponent: 0 } };
+  const INN_START_COL = 4; // E列 (0-based: 4)
+  const TOTAL_COL = 15; // P列 (0-based: 15)
+
+  for (let i = 1; i + 1 < gameMasterData.length; i += 2) {
+    const currentGameId = String(gameMasterData[i][0]).trim();
+    if (currentGameId !== gameId) continue;
+
+    const topTeam = String(gameMasterData[i][3]).trim();
+    const botTeam = String(gameMasterData[i + 1][3]).trim();
+    const isRickysTop = topTeam === 'Rickys';
+
+    const topRow = gameMasterData[i];
+    const botRow = gameMasterData[i + 1];
+
+    for (let inn = 0; inn < INNINGS; inn++) {
+      const topScore = Number(topRow[INN_START_COL + inn] || 0);
+      const botScore = Number(botRow[INN_START_COL + inn] || 0);
+
+      scoreboard.rickys.push(isRickysTop ? topScore : botScore);
+      scoreboard.opponent.push(isRickysTop ? botScore : topScore);
+    }
+
+    scoreboard.total.rickys = Number(topRow[TOTAL_COL] || 0);
+    scoreboard.total.opponent = Number(botRow[TOTAL_COL] || 0);
+    break;
+  }
+
+  // 野手成績（打席結果から集計）
+  const statsMap = _buildStatsMap(ss);
+  const batStats = [];
+  const ERROR_CODES = ['失策(投)','失策(捕)','失策(一)','失策(二)','失策(三)','失策(遊)','失策(左)','失策(中)','失策(右)'];
+  
+  roster.forEach(player => {
+    const stats = {
+      order: player.order,
+      name: player.name,
+      pa: 0, ab: 0, h: 0, d2: 0, d3: 0, hr: 0,
+      rbi: 0, runs: 0, sb: 0, bb: 0, hbp: 0, so: 0, sac: 0, sf: 0
+    };
+    
+    // 打席結果を集計
+    for (const key in batterResults) {
+      const result = batterResults[key][player.order];
+      if (!result) continue;
+      
+      const code = result.code;
+      const stat = statsMap[code];
+      
+      if (stat) {
+        stats.pa += Number(stat.打席) || 0;
+        stats.ab += Number(stat.打数) || 0;
+        stats.h += Number(stat.安打) || 0;
+        stats.d2 += Number(stat.二塁打) || 0;
+        stats.d3 += Number(stat.三塁打) || 0;
+        stats.hr += Number(stat.本塁打) || 0;
+        stats.rbi += Number(stat.打点) || 0;
+        stats.bb += Number(stat.四球) || 0;
+        stats.hbp += Number(stat.死球) || 0;
+        stats.so += Number(stat.三振) || 0;
+        stats.sac += Number(stat.犠打) || 0;
+        stats.sf += Number(stat.犠飛) || 0;
+      }
+    }
+    
+    // RBI・得点・盗塁はrbiDataから取得
+    const rbiInfo = rbiData[player.order] || { rbi: 0, runs: 0, sb: 0 };
+    stats.rbi = rbiInfo.rbi;
+    stats.runs = rbiInfo.runs;
+    stats.sb = rbiInfo.sb;
+    
+    // 打率・OPSを計算
+    stats.avg = stats.ab > 0 ? stats.h / stats.ab : 0;
+    const obp = stats.pa > 0 ? (stats.h + stats.bb + stats.hbp) / stats.pa : 0;
+    const slg = stats.ab > 0 ? (stats.h + stats.d2 * 2 + stats.d3 * 3 + stats.hr * 4) / stats.ab : 0;
+    stats.ops = obp + slg;
+    
+    batStats.push(stats);
+  });
+
+  // 投手成績（相手攻撃シートから取得）
+  const pitchStats = [];
+  if (pitSheet) {
+    const pitData = pitSheet.getDataRange().getValues();
+    const ER_DATA_START_ROW = 15;
+    const ER_PITCHERS = 7;
+    
+    // 相手攻撃シートの投手集計セクション（15〜21行目）から取得
+    for (let i = 0; i < ER_PITCHERS; i++) {
+      const row = ER_DATA_START_ROW + i;
+      const name = String(pitData[row]?.[0] || '').trim();
+      if (!name) continue;
+      
+      const stats = {
+        name,
+        ip: Number(pitData[row]?.[1] || 0),      // B列: 投球回（手動）
+        so: Number(pitData[row]?.[2] || 0),      // C列: 奪三振
+        h: Number(pitData[row]?.[5] || 0),       // F列: 被安打
+        hr: Number(pitData[row]?.[6] || 0),      // G列: 被本塁打
+        bb: Number(pitData[row]?.[9] || 0),      // J列: 四球
+        hbp: Number(pitData[row]?.[10] || 0),    // K列: 死球
+        r: Number(pitData[row]?.[13] || 0),      // N列: 失点
+        er: Number(pitData[row]?.[14] || 0),     // O列: 自責点
+      };
+      
+      // 防御率を計算
+      stats.era = stats.ip > 0 ? (stats.er * 9) / stats.ip : 0;
+      
+      pitchStats.push(stats);
+    }
+  }
+
+  return { opponent, gameDate: _formatDate(date), roster, batterResults, pitcherResults, rbiData, pitcherStats, scoreboard, batStats, pitchStats };
 }
 
 // ==================== POST ハンドラ ====================
@@ -407,6 +535,8 @@ function _writePitcherStats(sheet, pitcherStats) {
 }
 
 // ==================== ユーティリティ ====================
+
+// _buildStatsMap, _buildPlayerMap は main.gs で定義済み（GAS共有スコープで参照可能）
 
 function _normalizeDate(dateStr) {
   const m = String(dateStr).match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
