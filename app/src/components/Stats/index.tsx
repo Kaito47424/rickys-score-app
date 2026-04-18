@@ -17,17 +17,23 @@ export default function StatsPage() {
   const [tab, setTab] = useState<'bat' | 'pitch'>('bat')
   const [batStats, setBatStats]     = useState<BatStat[]>([])
   const [pitchStats, setPitchStats] = useState<PitchStat[]>([])
-  const [batLoading, setBatLoading]     = useState(true)
+  const [batLoading, setBatLoading]     = useState(false)
   const [pitchLoading, setPitchLoading] = useState(false)
   const [batError, setBatError]     = useState('')
   const [pitchError, setPitchError] = useState('')
 
   useEffect(() => {
+    loadBat()
+  }, [])
+
+  const loadBat = () => {
+    if (batStats.length > 0 || batLoading) return
+    setBatLoading(true)
     fetchBatStats()
       .then(setBatStats)
       .catch(() => setBatError('野手成績の取得に失敗しました'))
       .finally(() => setBatLoading(false))
-  }, [])
+  }
 
   const loadPitch = () => {
     if (pitchStats.length > 0 || pitchLoading) return
@@ -40,6 +46,7 @@ export default function StatsPage() {
 
   const handleTab = (t: 'bat' | 'pitch') => {
     setTab(t)
+    if (t === 'bat') loadBat()
     if (t === 'pitch') loadPitch()
   }
 
@@ -50,6 +57,7 @@ export default function StatsPage() {
 
   return (
     <div className="flex flex-col h-full">
+      {/* メインタブ */}
       <div className="flex border-b bg-white flex-none">
         {(['bat', 'pitch'] as const).map(t => (
           <button
@@ -62,9 +70,14 @@ export default function StatsPage() {
           </button>
         ))}
       </div>
+
+      {/* コンテンツ */}
       <div className="flex-1 overflow-auto">
         {loading ? (
-          <p className="text-gray-400 text-center py-16">読み込み中...</p>
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-gray-400 text-sm">読み込み中...</p>
+          </div>
         ) : error ? (
           <p className="text-red-500 text-center py-16 px-4">{error}</p>
         ) : rows.length === 0 ? (

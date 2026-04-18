@@ -29,7 +29,9 @@ export async function fetchPitchStats(): Promise<PitchStat[]> {
 export async function fetchGameData(gameId: string): Promise<GameData> {
   const res = await fetch(`${GAS_URL}?action=getGameData&gameId=${encodeURIComponent(gameId)}`)
   if (!res.ok) throw new Error('試合データの取得に失敗しました')
-  return res.json()
+  const data: GameData | { error: string } = await res.json()
+  if ('error' in data) throw new Error(String(data.error))
+  return data
 }
 
 // no-cors: レスポンスボディは読めないが GAS はデータを受け取る

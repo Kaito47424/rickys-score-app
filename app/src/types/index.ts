@@ -16,7 +16,8 @@ export type RosterEntry = {
   name: string
   position: string
   subName: string
-  subFromInning: number | null
+  subPosition?: string
+  subFromInning?: number | null
 }
 
 export type BatterEntry = { code: string; runCode: string | null }
@@ -62,9 +63,28 @@ export type LogEditPayload = {
 export type PitcherRunStat = { name: string; r: number; er: number }
 
 export type GameData = {
+  opponent: string
+  gameDate: string
   roster: RosterEntry[]
   batterResults: Record<string, Record<string, BatterEntry | string>>
   pitcherResults: Record<string, Record<string, { code: string; pitcher: string }>>
   rbiData: Record<string, { rbi: number; runs: number; sb: number }>
   pitcherStats?: PitcherRunStat[]
+  scoreboard?: {
+    rickys: number[]
+    opponent: number[]
+    total: { rickys: number; opponent: number }
+  }
+  batStats?: BatStat[]
+  pitchStats?: PitchStat[]
+  mvp?: { name: string; reason: string }
+  debug?: {
+    gameId: string
+    gameMasterDataLength: number
+    found: boolean
+    topTeam: string
+    botTeam: string
+    topScores: number[]
+    botScores: number[]
+  }
 }
