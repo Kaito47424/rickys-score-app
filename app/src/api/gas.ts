@@ -14,14 +14,16 @@ export async function fetchPlayers(): Promise<Player[]> {
   return res.json()
 }
 
-export async function fetchBatStats(): Promise<BatStat[]> {
-  const res = await fetch(`${GAS_URL}?action=getBatStats`)
+export async function fetchBatStats(year?: string): Promise<BatStat[]> {
+  const params = year ? `?action=getBatStats&year=${encodeURIComponent(year)}` : '?action=getBatStats'
+  const res = await fetch(`${GAS_URL}${params}`)
   if (!res.ok) throw new Error('野手成績の取得に失敗しました')
   return res.json()
 }
 
-export async function fetchPitchStats(): Promise<PitchStat[]> {
-  const res = await fetch(`${GAS_URL}?action=getPitchStats`)
+export async function fetchPitchStats(year?: string): Promise<PitchStat[]> {
+  const params = year ? `?action=getPitchStats&year=${encodeURIComponent(year)}` : '?action=getPitchStats'
+  const res = await fetch(`${GAS_URL}${params}`)
   if (!res.ok) throw new Error('投手成績の取得に失敗しました')
   return res.json()
 }
