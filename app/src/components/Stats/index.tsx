@@ -26,7 +26,6 @@ export default function StatsPage() {
 
   useEffect(() => {
     loadGames()
-    loadBat()
   }, [])
 
   useEffect(() => {
@@ -34,8 +33,6 @@ export default function StatsPage() {
       loadBat()
       loadPitch()
     } else {
-      // 年度フィルタが選択された場合、その年度の成績を取得
-      // 現在はキャリア成績のみ対応しているため、バックエンド対応が必要
       loadBat()
       loadPitch()
     }
@@ -52,6 +49,7 @@ export default function StatsPage() {
 
   const loadBat = () => {
     setBatLoading(true)
+    setBatError('')
     fetchBatStats(yearFilter === 'all' ? undefined : yearFilter)
       .then(setBatStats)
       .catch(() => setBatError('野手成績の取得に失敗しました'))
@@ -60,6 +58,7 @@ export default function StatsPage() {
 
   const loadPitch = () => {
     setPitchLoading(true)
+    setPitchError('')
     fetchPitchStats(yearFilter === 'all' ? undefined : yearFilter)
       .then(setPitchStats)
       .catch(() => setPitchError('投手成績の取得に失敗しました'))
