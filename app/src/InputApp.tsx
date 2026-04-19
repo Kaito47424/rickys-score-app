@@ -3,6 +3,7 @@ import type { GameInfo, RosterEntry, AllInningData, Page, PitcherRunStat, Batter
 import GameSelect from './components/GameSelect'
 import OrderEdit from './components/OrderEdit'
 import InputMain from './components/Input'
+import EditLogPage from './components/EditLog'
 import { DEFAULT_ROSTER_NAMES } from './constants/codes'
 import { fetchGameData } from './api/gas'
 
@@ -115,7 +116,7 @@ export default function InputApp() {
   return (
     <div className="min-h-screen bg-gray-100">
       {page === 'gameSelect' && (
-        <GameSelect onSelect={goToOrderEdit} />
+        <GameSelect onSelect={goToOrderEdit} onEditLog={() => setPage('editLog')} />
       )}
       {page === 'orderEdit' && game && (
         <OrderEdit
@@ -138,6 +139,9 @@ export default function InputApp() {
           setPitcherStats={setPitcherStats}
           onBack={() => setPage('orderEdit')}
         />
+      )}
+      {page === 'editLog' && (
+        <EditLogPage onBack={() => setPage('gameSelect')} />
       )}
     </div>
   )

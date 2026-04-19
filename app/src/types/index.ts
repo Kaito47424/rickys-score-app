@@ -16,7 +16,8 @@ export type RosterEntry = {
   name: string
   position: string
   subName: string
-  subFromInning: number | null
+  subPosition?: string
+  subFromInning?: number | null
 }
 
 export type BatterEntry = { code: string; runCode: string | null }
@@ -31,18 +32,59 @@ export type InningState = {
 }
 
 export type AllInningData = Record<string, InningState>
-export type Page = 'gameSelect' | 'orderEdit' | 'inputMain'
+export type Page = 'gameSelect' | 'orderEdit' | 'inputMain' | 'editLog'
 export type ModalTarget = { order: number; tab: 'batter' | 'pitcher' } | null
 
 export type BatStat = Record<string, string | number>
 export type PitchStat = Record<string, string | number>
 
+export type EditLogEntry = {
+  timestamp: string
+  gameId: string
+  editType: 'batter' | 'pitcher'
+  inning: string
+  round: string
+  order: string
+  oldValue: string
+  newValue: string
+}
+
+export type LogEditPayload = {
+  type: 'logEdit'
+  gameId: string
+  editType: 'batter' | 'pitcher'
+  inning: number
+  round: number
+  order: number
+  oldValue: string
+  newValue: string
+}
+
 export type PitcherRunStat = { name: string; r: number; er: number }
 
 export type GameData = {
+  opponent: string
+  gameDate: string
   roster: RosterEntry[]
   batterResults: Record<string, Record<string, BatterEntry | string>>
   pitcherResults: Record<string, Record<string, { code: string; pitcher: string }>>
   rbiData: Record<string, { rbi: number; runs: number; sb: number }>
   pitcherStats?: PitcherRunStat[]
+  scoreboard?: {
+    rickys: number[]
+    opponent: number[]
+    total: { rickys: number; opponent: number }
+  }
+  batStats?: BatStat[]
+  pitchStats?: PitchStat[]
+  mvp?: { name: string; reason: string }
+  debug?: {
+    gameId: string
+    gameMasterDataLength: number
+    found: boolean
+    topTeam: string
+    botTeam: string
+    topScores: number[]
+    botScores: number[]
+  }
 }

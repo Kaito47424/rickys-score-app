@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { GameInfo, RosterEntry, AllInningData, InningState, ModalTarget, PitcherRunStat, BatterEntry } from '../../types'
-import { postToGas } from '../../api/gas'
+import { postToGas, postLogEdit } from '../../api/gas'
 import InningBar from './InningBar'
 import CodeModal from '../CodePicker'
 import PitcherModal from './PitcherModal'
@@ -46,6 +46,16 @@ export default function InputMain({
   const [lastPitcher, setLastPitcher] = useState('')
   const [sending, setSending] = useState(false)
   const [toast, setToast] = useState('')
+  const [snapshots, setSnapshots] = useState<Record<string, InningState>>({})
+
+  // 初回マウント時、既存送信済みイニングのスナップショットを初期化
+  useEffect(() => {
+    const initial: Record<string, InningState> = {}
+    for (const k of submitted) {
+      if (inningData[k]) initial[k] = inningData[k]
+    }
+    setSnapshots(initial)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [subInputOrder, setSubInputOrder] = useState<number | null>(null)
   const [subInputText, setSubInputText] = useState('')
 
@@ -123,6 +133,27 @@ export default function InputMain({
   }
 
   const handleSubmit = async () => {
+    // 上書き時: スナップショットと差分を取りログを送信
+    if (isSubmitted && snapshots[key]) {
+      const prev = snapshots[key]
+      for (let order = 1; order <= 9; order++) {
+        const o = String(order)
+        const oldEntry = normEntry(prev.batterResults?.[o])
+        const newEntry = normEntry(current.batterResults?.[o])
+        if (oldEntry.code !== newEntry.code) {
+          postLogEdit({ gameId: game.gameId, editType: 'batter', inning, round, order, oldValue: oldEntry.code, newValue: newEntry.code })
+        }
+      }
+      for (let order = 1; order <= 9; order++) {
+        const o = String(order)
+        const oldPr = prev.pitcherResults?.[o] ?? { code: '', pitcher: '' }
+        const newPr = current.pitcherResults?.[o] ?? { code: '', pitcher: '' }
+        if (oldPr.code !== newPr.code) {
+          postLogEdit({ gameId: game.gameId, editType: 'pitcher', inning, round, order, oldValue: oldPr.code, newValue: newPr.code })
+        }
+      }
+    }
+
     setSending(true)
     try {
       await postToGas({
@@ -149,6 +180,7 @@ export default function InputMain({
       // no-cors: 送信は完了している
     }
     setSubmitted(prev => new Set([...prev, key]))
+    setSnapshots(prev => ({ ...prev, [key]: { ...current } }))
     showToast(`${inning}回 ${round}巡目 送信完了 ✓`)
     setSending(false)
   }
@@ -207,7 +239,7 @@ export default function InputMain({
           if (mainTab === 'batter') {
             const entry = normEntry(current.batterResults[orderStr])
             const rbi = current.rbiData[orderStr] ?? { rbi: 0, runs: 0, sb: 0 }
-            const isSubActive = r.subFromInning !== null && r.subFromInning <= inning
+            const isSubActive = r.subFromInning != null && r.subFromInning <= inning
             const displayName = isSubActive ? r.subName : r.name
             const showSubInput = subInputOrder === r.order
 

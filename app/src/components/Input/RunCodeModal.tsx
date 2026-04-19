@@ -1,4 +1,4 @@
-const RUN_CODES = ['盗塁失敗', '走塁死', '牽制死'] as const
+import { RUN_CODES } from '../../constants/codes'
 
 type Props = {
   current: string | null
