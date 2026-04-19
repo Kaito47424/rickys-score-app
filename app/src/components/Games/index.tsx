@@ -36,7 +36,6 @@ export default function GamesPage() {
               className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 text-left hover:bg-gray-50 transition-colors"
             >
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-gray-400">{game.gameId}</span>
                 <span className="text-xs text-gray-400">{game.gameDate}</span>
               </div>
               <p className="font-bold text-gray-800">{game.opponent}</p>

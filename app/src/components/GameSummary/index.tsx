@@ -108,26 +108,29 @@ export default function GameSummary() {
     return round === '2' ? `${inn}回②` : `${inn}回`
   }
 
-  // 各指標1位（batStatsが空でない場合のみ）
+  // 各指標1位（batStatsが空でない場合のみ・同率1位は全員表示）
   const topStats = batStats.length > 0
     ? [
-        { label: '安打数', name: best('h').name, val: String(best('h').val) },
-        { label: '打率', name: best('avg').name, val: fmt(best('avg').val, 'avg') },
-        { label: '本塁打', name: best('hr').name, val: String(best('hr').val) },
-        { label: '打点', name: best('rbi').name, val: String(best('rbi').val) },
-        { label: '盗塁', name: best('sb').name, val: String(best('sb').val) },
-        { label: 'OPS', name: best('ops').name, val: fmt(best('ops').val, 'ops') },
+        { label: '安打数', names: best('h').names, val: String(best('h').val) },
+        { label: '打率', names: best('avg').names, val: fmt(best('avg').val, 'avg') },
+        { label: '本塁打', names: best('hr').names, val: String(best('hr').val) },
+        { label: '打点', names: best('rbi').names, val: String(best('rbi').val) },
+        { label: '盗塁', names: best('sb').names, val: String(best('sb').val) },
+        { label: 'OPS', names: best('ops').names, val: fmt(best('ops').val, 'ops') },
       ]
     : []
 
   function best(key: string) {
-    let name = '—'
-    let val = 0
+    let maxVal = 0
     for (const p of batStats) {
       const v = Number(p[key] ?? 0)
-      if (v > val) { name = String(p.name ?? '—'); val = v }
+      if (v > maxVal) maxVal = v
     }
-    return { name, val }
+    if (maxVal === 0) return { names: ['—'], val: 0 }
+    const names = batStats
+      .filter(p => Number(p[key] ?? 0) === maxVal)
+      .map(p => String(p.name ?? '—'))
+    return { names, val: maxVal }
   }
 
   return (
@@ -201,7 +204,7 @@ export default function GameSummary() {
                   {topStats.map(s => (
                     <div key={s.label} className="flex justify-between">
                       <span className="text-gray-600">{s.label}</span>
-                      <span className="font-bold text-gray-800">{s.name} ({s.val})</span>
+                      <span className="font-bold text-gray-800">{s.names.join('、')} ({s.val})</span>
                     </div>
                   ))}
                 </div>
