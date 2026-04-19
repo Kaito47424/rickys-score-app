@@ -350,7 +350,7 @@ function _getGameData(gameId) {
   const pitchStats = [];
   if (pitSheet) {
     const pitData = pitSheet.getDataRange().getValues();
-    const ER_DATA_START_ROW = 15;
+    const ER_DATA_START_ROW = 14;
     const ER_PITCHERS = 7;
     
     // 相手攻撃シートの投手集計セクション（15〜21行目）から取得
