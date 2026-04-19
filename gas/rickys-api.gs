@@ -117,7 +117,7 @@ function _getPlayers() {
 
 function _getBatStats(year) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheetName = year ? `BAT_STATS_${year}` : 'BAT_STATS_CAREER';
+  const sheetName = year ? 'BAT_STATS_YEARLY' : 'BAT_STATS_CAREER';
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) return [];
 
@@ -125,10 +125,13 @@ function _getBatStats(year) {
   if (data.length < 2) return [];
 
   const headers = data[0].map(h => String(h).trim());
+  const yearIndex = headers.indexOf('年');
   const rows = [];
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
     if (!row[0]) continue;
+    // 年度フィルタ
+    if (year && yearIndex >= 0 && String(row[yearIndex]) !== year) continue;
     const obj = {};
     headers.forEach((h, j) => { obj[h] = row[j]; });
     rows.push(obj);
@@ -138,7 +141,7 @@ function _getBatStats(year) {
 
 function _getPitchStats(year) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheetName = year ? `PITCH_STATS_${year}` : 'PITCH_STATS_CAREER';
+  const sheetName = year ? 'PITCH_STATS_YEARLY' : 'PITCH_STATS_CAREER';
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) return [];
 
@@ -146,10 +149,13 @@ function _getPitchStats(year) {
   if (data.length < 2) return [];
 
   const headers = data[0].map(h => String(h).trim());
+  const yearIndex = headers.indexOf('年');
   const rows = [];
   for (let i = 1; i < data.length; i++) {
     const row = data[i];
     if (!row[0]) continue;
+    // 年度フィルタ
+    if (year && yearIndex >= 0 && String(row[yearIndex]) !== year) continue;
     const obj = {};
     headers.forEach((h, j) => { obj[h] = row[j]; });
     rows.push(obj);
