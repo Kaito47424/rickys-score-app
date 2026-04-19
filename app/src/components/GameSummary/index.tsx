@@ -200,7 +200,7 @@ export default function GameSummary() {
             {topStats.length > 0 && (
               <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
                 <h3 className="font-bold text-gray-800 mb-3">各指標1位</h3>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {topStats.map(s => (
                     <div key={s.label} className="flex justify-between">
                       <span className="text-gray-600">{s.label}</span>
