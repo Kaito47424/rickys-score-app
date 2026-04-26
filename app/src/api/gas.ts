@@ -63,3 +63,7 @@ export async function postLogEdit(payload: Omit<LogEditPayload, 'type'>): Promis
 export async function postMvp(gameId: string, name: string, reason: string): Promise<void> {
   await postToGas({ type: 'saveMvp', gameId, name, reason })
 }
+
+export async function deleteGame(gameId: string): Promise<void> {
+  await postToGas({ type: 'deleteGame', gameId })
+}
