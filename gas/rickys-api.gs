@@ -47,6 +47,7 @@ function doPost(e) {
       case 'inning':     _apiInning(data);     break;
       case 'logEdit':    _logEdit(data);        break;
       case 'saveMvp':    _saveMvp(data);        break;
+      case 'deleteGame': _deleteGame(data);     break;
       default:
         return ContentService.createTextOutput(`{"error":"Unknown type: ${data.type}"}`)
           .setMimeType(ContentService.MimeType.JSON);
@@ -472,6 +473,51 @@ function _getEditLog(gameId) {
   }
   // 新しい順に返す
   return rows.reverse();
+}
+
+function _deleteGame(data) {
+  const { gameId } = data;
+  if (!gameId) throw new Error('gameId が必要です');
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // 試合マスタから該当2行を削除（後ろから削除してズレを防ぐ）
+  const masterSheet = ss.getSheetByName('試合マスタ');
+  if (masterSheet) {
+    const masterData = masterSheet.getDataRange().getValues();
+    for (let i = masterData.length - 2; i >= 1; i -= 2) {
+      if (String(masterData[i][0]).trim() === gameId) {
+        masterSheet.deleteRows(i + 1, 2);
+        break;
+      }
+    }
+  }
+
+  // 野手・相手攻撃シートを削除（gameId前方一致で検索）
+  const allSheets = ss.getSheets().map(s => s.getName());
+  const batName = allSheets.find(s => s.startsWith(`野手_${gameId}_`));
+  const oppName = allSheets.find(s => s.startsWith(`相手攻撃_${gameId}_`));
+
+  if (batName) { const s = ss.getSheetByName(batName); if (s) ss.deleteSheet(s); }
+  if (oppName) { const s = ss.getSheetByName(oppName); if (s) ss.deleteSheet(s); }
+
+  // EDIT_LOG から該当 gameId の行を削除
+  const editLogSheet = ss.getSheetByName(EDIT_LOG_SHEET);
+  if (editLogSheet) {
+    const rows = editLogSheet.getDataRange().getValues();
+    for (let i = rows.length - 1; i >= 1; i--) {
+      if (String(rows[i][1]) === gameId) editLogSheet.deleteRow(i + 1);
+    }
+  }
+
+  // MVP_LOG から該当 gameId の行を削除
+  const mvpSheet = ss.getSheetByName(MVP_LOG_SHEET);
+  if (mvpSheet) {
+    const rows = mvpSheet.getDataRange().getValues();
+    for (let i = rows.length - 1; i >= 1; i--) {
+      if (String(rows[i][0]) === gameId) mvpSheet.deleteRow(i + 1);
+    }
+  }
 }
 
 function _saveMvp(data) {
