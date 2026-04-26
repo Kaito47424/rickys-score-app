@@ -72,6 +72,7 @@
 |------|------|--------------|
 | `createGame` | 試合作成 | `gameDate`, `opponent` |
 | `inning` | イニングデータ書き込み | `gameId`, `gameDate`, `opponent`, `inning`, `round`, `roster`, `batterResults`, `pitcherResults`, `rbiData`, `pitcherStats` |
+| `saveMvp` | MVP記録 | `gameId`, `name`, `reason` |
 
 ## 環境変数一覧
 

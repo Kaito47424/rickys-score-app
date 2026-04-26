@@ -4,6 +4,7 @@ import GameSelect from './components/GameSelect'
 import OrderEdit from './components/OrderEdit'
 import InputMain from './components/Input'
 import EditLogPage from './components/EditLog'
+import MvpInput from './components/MvpInput'
 import { DEFAULT_ROSTER_NAMES } from './constants/codes'
 import { fetchGameData } from './api/gas'
 
@@ -24,6 +25,7 @@ export default function InputApp() {
   const [submitted, setSubmitted] = useState<Set<string>>(new Set())
   const [pitcherStats, setPitcherStats] = useState<PitcherRunStat[]>([])
   const [loadingGame, setLoadingGame] = useState(false)
+  const [currentMvp, setCurrentMvp] = useState<{ name: string; reason: string } | null>(null)
 
   const goToOrderEdit = async (g: GameInfo) => {
     setGame(g)
@@ -85,6 +87,7 @@ export default function InputApp() {
         setInningData(newInningData)
         setSubmitted(newSubmitted)
         setPitcherStats(data.pitcherStats ?? [])
+        setCurrentMvp(data.mvp ?? null)
       } catch {
         setRoster(defaultRoster())
       } finally {
@@ -92,6 +95,7 @@ export default function InputApp() {
       }
     } else {
       setRoster(defaultRoster())
+      setCurrentMvp(null)
     }
 
     setPage('orderEdit')
@@ -138,6 +142,15 @@ export default function InputApp() {
           pitcherStats={pitcherStats}
           setPitcherStats={setPitcherStats}
           onBack={() => setPage('orderEdit')}
+          onMvpInput={() => setPage('mvpInput')}
+        />
+      )}
+      {page === 'mvpInput' && game && (
+        <MvpInput
+          game={game}
+          roster={roster}
+          initialMvp={currentMvp}
+          onBack={() => setPage('inputMain')}
         />
       )}
       {page === 'editLog' && (

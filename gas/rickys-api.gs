@@ -46,6 +46,7 @@ function doPost(e) {
       case 'createGame': _apiCreateGame(data); break;
       case 'inning':     _apiInning(data);     break;
       case 'logEdit':    _logEdit(data);        break;
+      case 'saveMvp':    _saveMvp(data);        break;
       default:
         return ContentService.createTextOutput(`{"error":"Unknown type: ${data.type}"}`)
           .setMimeType(ContentService.MimeType.JSON);
@@ -378,7 +379,8 @@ function _getGameData(gameId) {
     }
   }
 
-  return { opponent, gameDate: _formatDate(date), roster, batterResults, pitcherResults, rbiData, pitcherStats, scoreboard, batStats, pitchStats };
+  const mvp = _getMvp(gameId);
+  return { opponent, gameDate: _formatDate(date), roster, batterResults, pitcherResults, rbiData, pitcherStats, scoreboard, batStats, pitchStats, mvp };
 }
 
 // ==================== POST ハンドラ ====================
@@ -429,6 +431,9 @@ function _apiInning(data) {
 const EDIT_LOG_SHEET = 'EDIT_LOG';
 const EDIT_LOG_HEADERS = ['timestamp', 'gameId', 'editType', 'inning', 'round', 'order', 'oldValue', 'newValue'];
 
+const MVP_LOG_SHEET = 'MVP_LOG';
+const MVP_LOG_HEADERS = ['gameId', 'name', 'reason'];
+
 function _logEdit(data) {
   const { gameId, editType, inning, round, order, oldValue, newValue } = data;
   if (!gameId || !editType) throw new Error('gameId / editType が必要です');
@@ -467,6 +472,43 @@ function _getEditLog(gameId) {
   }
   // 新しい順に返す
   return rows.reverse();
+}
+
+function _saveMvp(data) {
+  const { gameId, name, reason } = data;
+  if (!gameId || !name) throw new Error('gameId / name が必要です');
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(MVP_LOG_SHEET);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(MVP_LOG_SHEET);
+    sheet.getRange(1, 1, 1, MVP_LOG_HEADERS.length).setValues([MVP_LOG_HEADERS]);
+  }
+
+  // 既存レコードを上書き（同 gameId の行を探して更新、なければ追記）
+  const data_ = sheet.getDataRange().getValues();
+  for (let i = 1; i < data_.length; i++) {
+    if (String(data_[i][0]) === String(gameId)) {
+      sheet.getRange(i + 1, 1, 1, 3).setValues([[gameId, name, reason ?? '']]);
+      return;
+    }
+  }
+  sheet.appendRow([gameId, name, reason ?? '']);
+}
+
+function _getMvp(gameId) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(MVP_LOG_SHEET);
+  if (!sheet) return null;
+
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(gameId)) {
+      return { name: String(data[i][1]), reason: String(data[i][2]) };
+    }
+  }
+  return null;
 }
 
 // ==================== 書き込みヘルパー ====================
