@@ -79,6 +79,7 @@ function _getGames() {
     const row = data[i];
     const gameId  = String(row[0]).trim();
     if (!gameId || !/^G\d+$/.test(gameId)) continue;
+    if (String(row[5]).trim() === 'deleted') continue;
 
     const dateRaw  = row[1];
     const gameDate = _formatDate(dateRaw);
@@ -481,41 +482,16 @@ function _deleteGame(data) {
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  // 試合マスタから該当2行を削除（後ろから削除してズレを防ぐ）
+  // 試合マスタの該当2行にdeleted フラグを立てる（F列 = index 5）
   const masterSheet = ss.getSheetByName('試合マスタ');
   if (masterSheet) {
     const masterData = masterSheet.getDataRange().getValues();
-    for (let i = masterData.length - 2; i >= 1; i -= 2) {
+    for (let i = 1; i + 1 < masterData.length; i += 2) {
       if (String(masterData[i][0]).trim() === gameId) {
-        masterSheet.deleteRows(i + 1, 2);
+        masterSheet.getRange(i + 1, 6).setValue('deleted');
+        masterSheet.getRange(i + 2, 6).setValue('deleted');
         break;
       }
-    }
-  }
-
-  // 野手・相手攻撃シートを削除（gameId前方一致で検索）
-  const allSheets = ss.getSheets().map(s => s.getName());
-  const batName = allSheets.find(s => s.startsWith(`野手_${gameId}_`));
-  const oppName = allSheets.find(s => s.startsWith(`相手攻撃_${gameId}_`));
-
-  if (batName) { const s = ss.getSheetByName(batName); if (s) ss.deleteSheet(s); }
-  if (oppName) { const s = ss.getSheetByName(oppName); if (s) ss.deleteSheet(s); }
-
-  // EDIT_LOG から該当 gameId の行を削除
-  const editLogSheet = ss.getSheetByName(EDIT_LOG_SHEET);
-  if (editLogSheet) {
-    const rows = editLogSheet.getDataRange().getValues();
-    for (let i = rows.length - 1; i >= 1; i--) {
-      if (String(rows[i][1]) === gameId) editLogSheet.deleteRow(i + 1);
-    }
-  }
-
-  // MVP_LOG から該当 gameId の行を削除
-  const mvpSheet = ss.getSheetByName(MVP_LOG_SHEET);
-  if (mvpSheet) {
-    const rows = mvpSheet.getDataRange().getValues();
-    for (let i = rows.length - 1; i >= 1; i--) {
-      if (String(rows[i][0]) === gameId) mvpSheet.deleteRow(i + 1);
     }
   }
 }
