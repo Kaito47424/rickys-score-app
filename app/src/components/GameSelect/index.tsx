@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { GameInfo } from '../../types'
-import { fetchGames, postToGas } from '../../api/gas'
+import { fetchGames, postToGas, deleteGame } from '../../api/gas'
 
 type Props = { onSelect: (game: GameInfo) => void; onEditLog: () => void }
 
@@ -23,6 +23,8 @@ export default function GameSelect({ onSelect, onEditLog }: Props) {
   const [date, setDate]         = useState(new Date().toISOString().slice(0, 10))
   const [opponent, setOpponent] = useState('')
   const [creating, setCreating] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<GameInfo | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     fetchGames()
@@ -35,6 +37,19 @@ export default function GameSelect({ onSelect, onEditLog }: Props) {
       .catch(() => setError('試合一覧の取得に失敗しました'))
       .finally(() => setLoading(false))
   }, [])
+
+  const handleDelete = async () => {
+    if (!deleteTarget?.gameId) return
+    setDeleting(true)
+    try {
+      await deleteGame(deleteTarget.gameId)
+      setGames(prev => prev.filter(g => g.gameId !== deleteTarget.gameId))
+    } catch {
+      // no-cors: ignore
+    }
+    setDeleting(false)
+    setDeleteTarget(null)
+  }
 
   const handleCreate = async () => {
     if (!date || !opponent.trim()) return
@@ -49,6 +64,7 @@ export default function GameSelect({ onSelect, onEditLog }: Props) {
   }
 
   return (
+    <>
     <div className="max-w-lg mx-auto p-4 pb-8">
       <div className="flex items-center gap-3 mb-4 pt-2">
         <span className="text-3xl">⚾</span>
@@ -138,30 +154,63 @@ export default function GameSelect({ onSelect, onEditLog }: Props) {
       ) : (
         <div className="space-y-2">
           {games.map(g => (
-            <button
-              key={g.gameId || `${g.gameDate}-${g.opponent}`}
-              onClick={() => onSelect(g)}
-              className="w-full bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center justify-between active:bg-gray-50"
-            >
-              <div className="text-left">
-                <p className="font-bold text-gray-800">{g.opponent}</p>
-                <p className="text-sm text-gray-500">{g.gameDate}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                  g.exists
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-gray-100 text-gray-500'
-                }`}>
-                  {g.exists ? 'シートあり' : '新規'}
-                </span>
-                <span className="text-gray-300 text-lg">›</span>
-              </div>
-            </button>
+            <div key={g.gameId || `${g.gameDate}-${g.opponent}`} className="flex gap-2">
+              <button
+                onClick={() => onSelect(g)}
+                className="flex-1 bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center justify-between active:bg-gray-50"
+              >
+                <div className="text-left">
+                  <p className="font-bold text-gray-800">{g.opponent}</p>
+                  <p className="text-sm text-gray-500">{g.gameDate}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                    g.exists
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    {g.exists ? 'シートあり' : '新規'}
+                  </span>
+                  <span className="text-gray-300 text-lg">›</span>
+                </div>
+              </button>
+              <button
+                onClick={() => setDeleteTarget(g)}
+                className="bg-white rounded-xl px-3 shadow-sm border border-gray-100 text-red-400 active:bg-red-50"
+              >
+                🗑
+              </button>
+            </div>
           ))}
         </div>
       )}
 
     </div>
+
+    {deleteTarget && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-6">
+        <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
+          <h3 className="font-bold text-gray-800 text-lg mb-1">試合を削除しますか？</h3>
+          <p className="text-sm text-gray-500 mb-1">{deleteTarget.gameDate} vs {deleteTarget.opponent}</p>
+          <p className="text-xs text-gray-500 mb-5">試合一覧から非表示になります。シートは残るので、スプシから復元できます。</p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setDeleteTarget(null)}
+              className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-600 font-bold active:bg-gray-50"
+            >
+              キャンセル
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-bold disabled:opacity-50 active:bg-red-600"
+            >
+              {deleting ? '削除中...' : '削除する'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }

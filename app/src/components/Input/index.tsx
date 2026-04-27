@@ -17,6 +17,7 @@ type Props = {
   pitcherStats: PitcherRunStat[]
   setPitcherStats: React.Dispatch<React.SetStateAction<PitcherRunStat[]>>
   onBack: () => void
+  onMvpInput: () => void
 }
 
 function emptyInning(): InningState {
@@ -35,7 +36,7 @@ function normEntry(v: BatterEntry | string | undefined): BatterEntry {
 
 export default function InputMain({
   game, roster, setRoster, inningData, setInningData, submitted, setSubmitted,
-  pitcherStats, setPitcherStats, onBack,
+  pitcherStats, setPitcherStats, onBack, onMvpInput,
 }: Props) {
   const [inning, setInning] = useState(1)
   const [round, setRound] = useState<1 | 2>(1)
@@ -199,6 +200,12 @@ export default function InputMain({
         {isSubmitted && (
           <span className="text-green-300 text-sm font-bold flex-none">送信済 ✓</span>
         )}
+        <button
+          onClick={onMvpInput}
+          className="flex-none px-2 py-1 bg-yellow-400 text-white rounded text-xs font-bold active:bg-yellow-500"
+        >
+          MVP
+        </button>
       </div>
 
       <div className="flex-none">

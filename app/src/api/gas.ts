@@ -59,3 +59,11 @@ export async function fetchEditLog(gameId?: string): Promise<EditLogEntry[]> {
 export async function postLogEdit(payload: Omit<LogEditPayload, 'type'>): Promise<void> {
   await postToGas({ type: 'logEdit', ...payload })
 }
+
+export async function postMvp(gameId: string, name: string, reason: string): Promise<void> {
+  await postToGas({ type: 'saveMvp', gameId, name, reason })
+}
+
+export async function deleteGame(gameId: string): Promise<void> {
+  await postToGas({ type: 'deleteGame', gameId })
+}
