@@ -192,7 +192,7 @@ export default function GameSelect({ onSelect, onEditLog }: Props) {
         <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
           <h3 className="font-bold text-gray-800 text-lg mb-1">試合を削除しますか？</h3>
           <p className="text-sm text-gray-500 mb-1">{deleteTarget.gameDate} vs {deleteTarget.opponent}</p>
-          <p className="text-xs text-red-500 mb-5">スプレッドシートのシートと記録が削除されます。この操作は元に戻せません。</p>
+          <p className="text-xs text-gray-500 mb-5">試合一覧から非表示になります。シートは残るので、スプシから復元できます。</p>
           <div className="flex gap-3">
             <button
               onClick={() => setDeleteTarget(null)}
