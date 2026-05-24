@@ -139,7 +139,51 @@ function _getBatStats(year) {
     headers.forEach((h, j) => { obj[h] = row[j]; });
     rows.push(obj);
   }
+
+  const mvpMap = _buildMvpCountMap(ss, year);
+  rows.forEach(row => { row['MVP'] = mvpMap[String(row['選手名'])] || 0; });
+
   return rows;
+}
+
+function _buildMvpCountMap(ss, year) {
+  const mvpSheet = ss.getSheetByName('MVP_LOG');
+  if (!mvpSheet) return {};
+
+  const mvpData = mvpSheet.getDataRange().getValues();
+  if (mvpData.length < 2) return {};
+
+  let gameYearMap = null;
+  if (year) {
+    gameYearMap = {};
+    const gameSheet = ss.getSheetByName('試合マスタ');
+    if (gameSheet) {
+      const gameData = gameSheet.getDataRange().getValues();
+      for (let i = 1; i + 1 < gameData.length; i += 2) {
+        const gameId = String(gameData[i][0]).trim();
+        if (!gameId || !/^G\d+$/.test(gameId)) continue;
+        const dateRaw = gameData[i][1];
+        let gameYear = null;
+        if (dateRaw instanceof Date) {
+          gameYear = String(dateRaw.getFullYear());
+        } else {
+          const m = String(dateRaw).match(/(\d{4})/);
+          if (m) gameYear = m[1];
+        }
+        if (gameYear) gameYearMap[gameId] = gameYear;
+      }
+    }
+  }
+
+  const map = {};
+  for (let i = 1; i < mvpData.length; i++) {
+    const gameId = String(mvpData[i][0]).trim();
+    const name   = String(mvpData[i][1]).trim();
+    if (!name) continue;
+    if (gameYearMap && gameYearMap[gameId] !== year) continue;
+    map[name] = (map[name] || 0) + 1;
+  }
+  return map;
 }
 
 function _getPitchStats(year) {
