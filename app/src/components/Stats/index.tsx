@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { BatStat, PitchStat } from '../../types'
 import { fetchBatStats, fetchPitchStats, fetchGames } from '../../api/gas'
 
-const BAT_COLS  = ['選手名', '試合数', '打席', '打数', '安打', '打率', '本塁打', '打点', '得点', '盗塁', 'OPS', 'MVP'] as const
+const BAT_COLS  = ['選手名', '試合数', '打席', '打数', '安打', '打率', '出塁率(OBP)', 'OPS', '三振率(K%)', 'POP', '走者なし打率', '走者あり打率', '得点圏打率', '本塁打', '打点', '得点', '盗塁', 'MVP'] as const
 const PIT_COLS  = ['選手名', '登板試合数', '投球回', '被安打', '奪三振', '四球', '失点', '自責点', '防御率(ERA)'] as const
 
 const LOWER_IS_BETTER = new Set(['防御率(ERA)'])
