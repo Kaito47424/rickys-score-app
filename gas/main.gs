@@ -1080,6 +1080,8 @@ function _exportBatters() {
     const batStart0 = BATTER_DATA_START - 1;
     const batEnd0   = batStart0 + BATTING_ORDERS * ROWS_PER_ORDER;
 
+    const gameStatsStart = gameStats.length;
+
     for (let r = batStart0; r < batEnd0 && r < data.length; r++) {
       const row        = data[r];
       const playerName = String(row[2] || '').trim();
@@ -1132,8 +1134,11 @@ function _exportBatters() {
         battingOrder, appearanceType, position,
         pa, ab, h, d2, d3, hr, rbi, runs, sb, bb, hbp, so, sac, sf,
         flyCount, flyOutCount, errorCount, errorOnBase,
+        noRunnerAb: 0, noRunnerH: 0, runnerAb: 0, runnerH: 0, spAb: 0, spH: 0,
       });
     }
+
+    const gameSitMap = {};
 
     let runners = [0, 0, 0];
     let outs    = 0;
@@ -1175,8 +1180,30 @@ function _exportBatters() {
           leadoffFlag, runnerFlag, spFlag,
         ]);
 
+        const sitAbF = Number(pbpStat.打数) || 0;
+        const sitHF  = Number(pbpStat.安打) || 0;
+        if (sitAbF > 0) {
+          if (!gameSitMap[pName]) gameSitMap[pName] = { noRunnerAb: 0, noRunnerH: 0, runnerAb: 0, runnerH: 0, spAb: 0, spH: 0 };
+          const sit = gameSitMap[pName];
+          if (!runnerFlag) { sit.noRunnerAb += sitAbF; sit.noRunnerH += sitHF; }
+          else             { sit.runnerAb   += sitAbF; sit.runnerH   += sitHF; }
+          if (spFlag)      { sit.spAb       += sitAbF; sit.spH       += sitHF; }
+        }
+
         [runners, outs] = _applyAbState(runners, outs, code, runCode);
         if (outs >= 3) { runners = [0, 0, 0]; outs = 0; }
+      }
+    }
+
+    for (let i = gameStatsStart; i < gameStats.length; i++) {
+      const sit = gameSitMap[gameStats[i].playerName];
+      if (sit) {
+        gameStats[i].noRunnerAb = sit.noRunnerAb;
+        gameStats[i].noRunnerH  = sit.noRunnerH;
+        gameStats[i].runnerAb   = sit.runnerAb;
+        gameStats[i].runnerH    = sit.runnerH;
+        gameStats[i].spAb       = sit.spAb;
+        gameStats[i].spH        = sit.spH;
       }
     }
   });
@@ -1188,7 +1215,9 @@ function _exportBatters() {
     return {
       playerId, playerName, games: 0,
       pa: 0, ab: 0, h: 0, d2: 0, d3: 0, hr: 0, rbi: 0, runs: 0, sb: 0,
-      bb: 0, hbp: 0, so: 0, sac: 0, sf: 0, flyCount: 0, errorCount: 0, errorOnBase: 0,
+      bb: 0, hbp: 0, so: 0, sac: 0, sf: 0,
+      flyCount: 0, flyOutCount: 0, errorCount: 0, errorOnBase: 0,
+      noRunnerAb: 0, noRunnerH: 0, runnerAb: 0, runnerH: 0, spAb: 0, spH: 0,
     };
   }
 
@@ -1202,9 +1231,16 @@ function _exportBatters() {
     ya.rbi += g.rbi; ya.runs += g.runs; ya.sb += g.sb;
     ya.bb += g.bb; ya.hbp += g.hbp; ya.so += g.so;
     ya.sac += g.sac; ya.sf += g.sf;
-    ya.flyCount += g.flyCount;
-    ya.errorCount += g.errorCount;
+    ya.flyCount    += g.flyCount;
+    ya.flyOutCount += g.flyOutCount;
+    ya.errorCount  += g.errorCount;
     ya.errorOnBase += g.errorOnBase;
+    ya.noRunnerAb  += g.noRunnerAb;
+    ya.noRunnerH   += g.noRunnerH;
+    ya.runnerAb    += g.runnerAb;
+    ya.runnerH     += g.runnerH;
+    ya.spAb        += g.spAb;
+    ya.spH         += g.spH;
 
     if (!careerMap[g.playerId]) careerMap[g.playerId] = _blankBatAgg(g.playerId, g.playerName);
     const ca = careerMap[g.playerId];
@@ -1214,9 +1250,16 @@ function _exportBatters() {
     ca.rbi += g.rbi; ca.runs += g.runs; ca.sb += g.sb;
     ca.bb += g.bb; ca.hbp += g.hbp; ca.so += g.so;
     ca.sac += g.sac; ca.sf += g.sf;
-    ca.flyCount += g.flyCount;
-    ca.errorCount += g.errorCount;
+    ca.flyCount    += g.flyCount;
+    ca.flyOutCount += g.flyOutCount;
+    ca.errorCount  += g.errorCount;
     ca.errorOnBase += g.errorOnBase;
+    ca.noRunnerAb  += g.noRunnerAb;
+    ca.noRunnerH   += g.noRunnerH;
+    ca.runnerAb    += g.runnerAb;
+    ca.runnerH     += g.runnerH;
+    ca.spAb        += g.spAb;
+    ca.spH         += g.spH;
   });
 
   function _calcBatRates(a) {
@@ -1228,14 +1271,19 @@ function _exportBatters() {
     const ops    = _round3(obp + slg);
     const fbDen  = a.ab - a.so;
     const fbPct  = fbDen > 0 ? _round3(a.flyCount / fbDen) : 0;
-    return { avg, obp, slg, ops, fbPct };
+    const pop         = a.pa > 0 ? _round3(a.flyOutCount / a.pa) : 0;
+    const soRate      = a.pa > 0 ? _round3(a.so / a.pa) : 0;
+    const noRunnerAvg = a.noRunnerAb > 0 ? _round3(a.noRunnerH / a.noRunnerAb) : 0;
+    const runnerAvg   = a.runnerAb   > 0 ? _round3(a.runnerH   / a.runnerAb)   : 0;
+    const spAvg       = a.spAb       > 0 ? _round3(a.spH       / a.spAb)       : 0;
+    return { avg, obp, slg, ops, fbPct, pop, soRate, noRunnerAvg, runnerAvg, spAvg };
   }
 
   const batCountingHeaders = [
     '打席', '打数', '安打', '二塁打', '三塁打', '本塁打',
     '打点', '得点', '盗塁', '四球', '死球', '三振', '犠打', '犠飛', '失策', '失策出塁',
   ];
-  const batRateHeaders = ['打率', '出塁率(OBP)', '長打率(SLG)', 'OPS', 'フライ率(FB%)'];
+  const batRateHeaders = ['打率', '出塁率(OBP)', '長打率(SLG)', 'OPS', 'フライ率(FB%)', 'POP', '三振率(K%)', '走者なし打率', '走者あり打率', '得点圏打率'];
 
   function _batCountingCols(a) {
     return [
@@ -1248,13 +1296,13 @@ function _exportBatters() {
   const yearlyRows = Object.values(yearlyMap).map(a => {
     const r = _calcBatRates(a);
     return [a.year, a.playerId, a.playerName, a.games,
-            ..._batCountingCols(a), r.avg, r.obp, r.slg, r.ops, r.fbPct];
+            ..._batCountingCols(a), r.avg, r.obp, r.slg, r.ops, r.fbPct, r.pop, r.soRate, r.noRunnerAvg, r.runnerAvg, r.spAvg];
   });
 
   const careerRows = Object.values(careerMap).map(a => {
     const r = _calcBatRates(a);
     return [a.playerId, a.playerName, a.games,
-            ..._batCountingCols(a), r.avg, r.obp, r.slg, r.ops, r.fbPct];
+            ..._batCountingCols(a), r.avg, r.obp, r.slg, r.ops, r.fbPct, r.pop, r.soRate, r.noRunnerAvg, r.runnerAvg, r.spAvg];
   });
 
   const rawGameRows = gameStats.map(g => [
