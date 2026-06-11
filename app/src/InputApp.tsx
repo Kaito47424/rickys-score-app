@@ -6,7 +6,7 @@ import InputMain from './components/Input'
 import EditLogPage from './components/EditLog'
 import MvpInput from './components/MvpInput'
 import { DEFAULT_ROSTER_NAMES } from './constants/codes'
-import { fetchGameData } from './api/gas'
+import { fetchGameData, postToGas } from './api/gas'
 
 const defaultRoster = (): RosterEntry[] =>
   Array.from({ length: 9 }, (_, i) => ({
@@ -104,6 +104,22 @@ export default function InputApp() {
   const goToInputMain = (r: RosterEntry[]) => {
     setRoster(r)
     setPage('inputMain')
+    if (game) {
+      postToGas({
+        type: 'saveRoster',
+        gameId: game.gameId,
+        gameDate: game.gameDate,
+        opponent: game.opponent,
+        roster: r.map(entry => ({
+          order: entry.order,
+          name: entry.name,
+          position: entry.position,
+          subName: entry.subName,
+          subPosition: '',
+          subFromInning: entry.subFromInning,
+        })),
+      })
+    }
   }
 
   if (loadingGame) {

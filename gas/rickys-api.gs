@@ -43,11 +43,12 @@ function doPost(e) {
 
   try {
     switch (data.type) {
-      case 'createGame': _apiCreateGame(data); break;
-      case 'inning':     _apiInning(data);     break;
-      case 'logEdit':    _logEdit(data);        break;
-      case 'saveMvp':    _saveMvp(data);        break;
-      case 'deleteGame': _deleteGame(data);     break;
+      case 'createGame':  _apiCreateGame(data);  break;
+      case 'inning':      _apiInning(data);      break;
+      case 'saveRoster':  _apiSaveRoster(data);  break;
+      case 'logEdit':     _logEdit(data);         break;
+      case 'saveMvp':     _saveMvp(data);         break;
+      case 'deleteGame':  _deleteGame(data);      break;
       default:
         return ContentService.createTextOutput(`{"error":"Unknown type: ${data.type}"}`)
           .setMimeType(ContentService.MimeType.JSON);
@@ -351,17 +352,17 @@ function _getGameData(gameId) {
       order: player.order,
       name: player.name,
       pa: 0, ab: 0, h: 0, d2: 0, d3: 0, hr: 0,
-      rbi: 0, runs: 0, sb: 0, bb: 0, hbp: 0, so: 0, sac: 0, sf: 0
+      rbi: 0, runs: 0, sb: 0, bb: 0, hbp: 0, so: 0, sac: 0, sf: 0, e: 0
     };
-    
+
     // 打席結果を集計
     for (const key in batterResults) {
       const result = batterResults[key][player.order];
       if (!result) continue;
-      
+
       const code = result.code;
       const stat = statsMap[code];
-      
+
       if (stat) {
         stats.pa += Number(stat.打席) || 0;
         stats.ab += Number(stat.打数) || 0;
@@ -376,6 +377,7 @@ function _getGameData(gameId) {
         stats.sac += Number(stat.犠打) || 0;
         stats.sf += Number(stat.犠飛) || 0;
       }
+      if (ERROR_CODES.includes(code)) stats.e++;
     }
     
     // RBI・得点・盗塁はrbiDataから取得
@@ -386,7 +388,8 @@ function _getGameData(gameId) {
     
     // 打率・OPSを計算
     stats.avg = stats.ab > 0 ? stats.h / stats.ab : 0;
-    const obp = stats.pa > 0 ? (stats.h + stats.bb + stats.hbp) / stats.pa : 0;
+    const obpDen = stats.ab + stats.bb + stats.hbp + stats.sf;
+    const obp = obpDen > 0 ? (stats.h + stats.bb + stats.hbp + stats.e) / obpDen : 0;
     const slg = stats.ab > 0 ? (stats.h + stats.d2 * 2 + stats.d3 * 3 + stats.hr * 4) / stats.ab : 0;
     stats.ops = obp + slg;
     
@@ -443,6 +446,35 @@ function _apiCreateGame(data) {
     // createNewGame は UI依存のため、ここでは直接シート作成ロジックを呼ぶ
   }
   // シート作成は gas_script.js 側に委譲（同一プロジェクト内）
+}
+
+function _apiSaveRoster(data) {
+  const { gameId, gameDate, opponent, roster } = data;
+  if (!gameId || !gameDate || !opponent || !roster) return;
+
+  const ss      = SpreadsheetApp.getActiveSpreadsheet();
+  const dateTag = _normalizeDate(String(gameDate));
+
+  const batName = _findSheet(ss, `野手_${gameId}_${dateTag}_${opponent}`, gameId, opponent, '野手');
+  if (!batName) return;
+  const batSheet = ss.getSheetByName(batName);
+  if (!batSheet) return;
+
+  const DATA_START    = 4;
+  const ROWS_PER_ORDER = 2;
+
+  roster.forEach(r => {
+    const rowTop = DATA_START + (r.order - 1) * ROWS_PER_ORDER;
+    batSheet.getRange(rowTop, 1).setValue(r.order);
+    batSheet.getRange(rowTop, 2).setValue('先発');
+    batSheet.getRange(rowTop, 3).setValue(r.name);
+    batSheet.getRange(rowTop, 4).setValue(r.position);
+    if (r.subName) {
+      batSheet.getRange(rowTop + 1, 2).setValue('交代');
+      batSheet.getRange(rowTop + 1, 3).setValue(r.subName);
+      batSheet.getRange(rowTop + 1, 4).setValue(r.subPosition || '');
+    }
+  });
 }
 
 function _apiInning(data) {
