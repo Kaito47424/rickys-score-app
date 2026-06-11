@@ -351,17 +351,17 @@ function _getGameData(gameId) {
       order: player.order,
       name: player.name,
       pa: 0, ab: 0, h: 0, d2: 0, d3: 0, hr: 0,
-      rbi: 0, runs: 0, sb: 0, bb: 0, hbp: 0, so: 0, sac: 0, sf: 0
+      rbi: 0, runs: 0, sb: 0, bb: 0, hbp: 0, so: 0, sac: 0, sf: 0, e: 0
     };
-    
+
     // 打席結果を集計
     for (const key in batterResults) {
       const result = batterResults[key][player.order];
       if (!result) continue;
-      
+
       const code = result.code;
       const stat = statsMap[code];
-      
+
       if (stat) {
         stats.pa += Number(stat.打席) || 0;
         stats.ab += Number(stat.打数) || 0;
@@ -376,6 +376,7 @@ function _getGameData(gameId) {
         stats.sac += Number(stat.犠打) || 0;
         stats.sf += Number(stat.犠飛) || 0;
       }
+      if (ERROR_CODES.includes(code)) stats.e++;
     }
     
     // RBI・得点・盗塁はrbiDataから取得
@@ -386,7 +387,8 @@ function _getGameData(gameId) {
     
     // 打率・OPSを計算
     stats.avg = stats.ab > 0 ? stats.h / stats.ab : 0;
-    const obp = stats.pa > 0 ? (stats.h + stats.bb + stats.hbp) / stats.pa : 0;
+    const obpDen = stats.ab + stats.bb + stats.hbp + stats.sf;
+    const obp = obpDen > 0 ? (stats.h + stats.bb + stats.hbp + stats.e) / obpDen : 0;
     const slg = stats.ab > 0 ? (stats.h + stats.d2 * 2 + stats.d3 * 3 + stats.hr * 4) / stats.ab : 0;
     stats.ops = obp + slg;
     

@@ -1265,7 +1265,7 @@ function _exportBatters() {
   function _calcBatRates(a) {
     const avg    = a.ab > 0 ? _round3(a.h / a.ab) : 0;
     const obpDen = a.ab + a.bb + a.hbp + a.sf;
-    const obp    = obpDen > 0 ? _round3((a.h + a.bb + a.hbp) / obpDen) : 0;
+    const obp    = obpDen > 0 ? _round3((a.h + a.bb + a.hbp + (a.errorOnBase || 0)) / obpDen) : 0;
     const single = a.h - a.d2 - a.d3 - a.hr;
     const slg    = a.ab > 0 ? _round3((single + a.d2 * 2 + a.d3 * 3 + a.hr * 4) / a.ab) : 0;
     const ops    = _round3(obp + slg);
