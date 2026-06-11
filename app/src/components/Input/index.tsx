@@ -240,6 +240,76 @@ export default function InputMain({
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-2 pb-24">
+        {mainTab === 'pitcher' && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="px-3 py-2 bg-gray-50 border-b flex items-center justify-between">
+              <p className="text-xs font-bold text-gray-600">投手別集計（失点・自責点）</p>
+              {pitcherStats.length < 7 && (
+                <button
+                  onClick={() => setPitcherStats(prev => [...prev, { name: '', r: 0, er: 0 }])}
+                  className="text-xs font-bold text-blue-600 active:text-blue-800"
+                >＋ 追加</button>
+              )}
+            </div>
+            {pitcherStats.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">「＋ 追加」で投手を登録</p>
+            ) : (
+              <div className="divide-y">
+                {pitcherStats.map((ps, idx) => (
+                  <div key={idx} className="px-3 py-2.5 flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={ps.name}
+                      onChange={e => setPitcherStats(prev =>
+                        prev.map((s, i) => i === idx ? { ...s, name: e.target.value } : s)
+                      )}
+                      list="pitcher-names-list"
+                      placeholder="投手名"
+                      className="flex-1 min-w-0 border rounded-lg px-2 py-1.5 text-sm"
+                    />
+                    <div className="flex items-center gap-0.5 flex-none">
+                      <span className="text-[10px] text-gray-400 w-6 text-center">失点</span>
+                      <button
+                        onClick={() => setPitcherStats(prev =>
+                          prev.map((s, i) => i === idx ? { ...s, r: Math.max(0, s.r - 1) } : s)
+                        )}
+                        className="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 font-bold text-sm active:bg-gray-200 flex items-center justify-center"
+                      >−</button>
+                      <span className="w-6 text-center text-sm font-bold text-gray-700">{ps.r}</span>
+                      <button
+                        onClick={() => setPitcherStats(prev =>
+                          prev.map((s, i) => i === idx ? { ...s, r: s.r + 1 } : s)
+                        )}
+                        className="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 font-bold text-sm active:bg-blue-200 flex items-center justify-center"
+                      >＋</button>
+                    </div>
+                    <div className="flex items-center gap-0.5 flex-none">
+                      <span className="text-[10px] text-gray-400 w-8 text-center">自責</span>
+                      <button
+                        onClick={() => setPitcherStats(prev =>
+                          prev.map((s, i) => i === idx ? { ...s, er: Math.max(0, s.er - 1) } : s)
+                        )}
+                        className="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 font-bold text-sm active:bg-gray-200 flex items-center justify-center"
+                      >−</button>
+                      <span className="w-6 text-center text-sm font-bold text-gray-700">{ps.er}</span>
+                      <button
+                        onClick={() => setPitcherStats(prev =>
+                          prev.map((s, i) => i === idx ? { ...s, er: s.er + 1 } : s)
+                        )}
+                        className="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 font-bold text-sm active:bg-blue-200 flex items-center justify-center"
+                      >＋</button>
+                    </div>
+                    <button
+                      onClick={() => setPitcherStats(prev => prev.filter((_, i) => i !== idx))}
+                      className="text-gray-300 text-lg leading-none active:text-red-400 flex-none"
+                    >×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {roster.map(r => {
           const orderStr = String(r.order)
 
@@ -381,76 +451,6 @@ export default function InputMain({
             )
           }
         })}
-
-        {mainTab === 'pitcher' && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-3 py-2 bg-gray-50 border-b flex items-center justify-between">
-              <p className="text-xs font-bold text-gray-600">投手別集計</p>
-              {pitcherStats.length < 7 && (
-                <button
-                  onClick={() => setPitcherStats(prev => [...prev, { name: '', r: 0, er: 0 }])}
-                  className="text-xs font-bold text-blue-600 active:text-blue-800"
-                >＋ 追加</button>
-              )}
-            </div>
-            {pitcherStats.length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-4">「＋ 追加」で投手を登録</p>
-            ) : (
-              <div className="divide-y">
-                {pitcherStats.map((ps, idx) => (
-                  <div key={idx} className="px-3 py-2.5 flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={ps.name}
-                      onChange={e => setPitcherStats(prev =>
-                        prev.map((s, i) => i === idx ? { ...s, name: e.target.value } : s)
-                      )}
-                      list="pitcher-names-list"
-                      placeholder="投手名"
-                      className="flex-1 min-w-0 border rounded-lg px-2 py-1.5 text-sm"
-                    />
-                    <div className="flex items-center gap-0.5 flex-none">
-                      <span className="text-[10px] text-gray-400 w-6 text-center">失点</span>
-                      <button
-                        onClick={() => setPitcherStats(prev =>
-                          prev.map((s, i) => i === idx ? { ...s, r: Math.max(0, s.r - 1) } : s)
-                        )}
-                        className="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 font-bold text-sm active:bg-gray-200 flex items-center justify-center"
-                      >−</button>
-                      <span className="w-6 text-center text-sm font-bold text-gray-700">{ps.r}</span>
-                      <button
-                        onClick={() => setPitcherStats(prev =>
-                          prev.map((s, i) => i === idx ? { ...s, r: s.r + 1 } : s)
-                        )}
-                        className="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 font-bold text-sm active:bg-blue-200 flex items-center justify-center"
-                      >＋</button>
-                    </div>
-                    <div className="flex items-center gap-0.5 flex-none">
-                      <span className="text-[10px] text-gray-400 w-8 text-center">自責</span>
-                      <button
-                        onClick={() => setPitcherStats(prev =>
-                          prev.map((s, i) => i === idx ? { ...s, er: Math.max(0, s.er - 1) } : s)
-                        )}
-                        className="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 font-bold text-sm active:bg-gray-200 flex items-center justify-center"
-                      >−</button>
-                      <span className="w-6 text-center text-sm font-bold text-gray-700">{ps.er}</span>
-                      <button
-                        onClick={() => setPitcherStats(prev =>
-                          prev.map((s, i) => i === idx ? { ...s, er: s.er + 1 } : s)
-                        )}
-                        className="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 font-bold text-sm active:bg-blue-200 flex items-center justify-center"
-                      >＋</button>
-                    </div>
-                    <button
-                      onClick={() => setPitcherStats(prev => prev.filter((_, i) => i !== idx))}
-                      className="text-gray-300 text-lg leading-none active:text-red-400 flex-none"
-                    >×</button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
 
         <datalist id="pitcher-names-list">
           {roster.map(r => r.name).filter(Boolean).map(n => (
