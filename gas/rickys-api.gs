@@ -643,10 +643,13 @@ function _writeBatterInning(sheet, inning, round, roster, batterResults, rbiData
     const cellValue = runCode ? `${hitCode}/${runCode}` : hitCode;
     if (cellValue) sheet.getRange(rowTop, col).setValue(cellValue);
 
-    // 打点・得点・盗塁（集計列はスプシ数式側で集計しているため個別列に書く）
+    // 打点・得点・盗塁（_getGameData の r[STATS+5〜7] と対称: 1始まりで STATS+6〜8列目）
+    const INNINGS = 11, ROUNDS = 2;
+    const STATS = AB_START + INNINGS * ROUNDS; // 5 + 22 = 27
     const rbi = rbiData[String(r.order)] || { rbi: 0, runs: 0, sb: 0 };
-    // RBI/得点/盗塁は集計列（S列〜）に加算ではなく専用列があればそこへ
-    // ※ スプシの設計に合わせて必要なら調整
+    sheet.getRange(rowTop, STATS + 6).setValue(rbi.rbi);
+    sheet.getRange(rowTop, STATS + 7).setValue(rbi.runs);
+    sheet.getRange(rowTop, STATS + 8).setValue(rbi.sb);
   });
 }
 
