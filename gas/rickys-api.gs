@@ -644,12 +644,15 @@ function _writeBatterInning(sheet, inning, round, roster, batterResults, rbiData
     if (cellValue) sheet.getRange(rowTop, col).setValue(cellValue);
 
     // 打点・得点・盗塁（_getGameData の r[STATS+5〜7] と対称: 1始まりで STATS+6〜8列目）
+    // rbiData にキーが存在するイニングの送信時のみ書き込む（他イニング送信で上書きしない）
     const INNINGS = 11, ROUNDS = 2;
     const STATS = AB_START + INNINGS * ROUNDS; // 5 + 22 = 27
-    const rbi = rbiData[String(r.order)] || { rbi: 0, runs: 0, sb: 0 };
-    sheet.getRange(rowTop, STATS + 6).setValue(rbi.rbi);
-    sheet.getRange(rowTop, STATS + 7).setValue(rbi.runs);
-    sheet.getRange(rowTop, STATS + 8).setValue(rbi.sb);
+    const rbiEntry = rbiData[String(r.order)];
+    if (rbiEntry !== undefined) {
+      sheet.getRange(rowTop, STATS + 6).setValue(rbiEntry.rbi);
+      sheet.getRange(rowTop, STATS + 7).setValue(rbiEntry.runs);
+      sheet.getRange(rowTop, STATS + 8).setValue(rbiEntry.sb);
+    }
   });
 }
 
