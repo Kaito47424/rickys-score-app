@@ -723,3 +723,71 @@ function _findSheet(ss, exactName, gameId, opponent, prefix) {
   );
   return found || null;
 }
+
+// ==================== 移行用 ====================
+
+// 旧フォーマット（32列）の野手シートを新フォーマット（40列）に移行する
+// ※実行前にスプレッドシートをバックアップしてください
+function migrateLegacyBatterSheets() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheets = ss.getSheets().filter(s => s.getName().startsWith('野手_'));
+
+  const OLD_LAST_COL = 32;
+  const STATS_START  = 27; // AA列
+  const AB_START     = 5;
+  const INNINGS      = 11;
+  const ROUNDS       = 2;
+  const DATA_START   = 4;
+  const ROWS_PER_ORDER = 2;
+  const BATTING_ORDERS = 9;
+
+  // 新しいヘッダ（STATS_START〜STATS_START+13）
+  const newHeaders = ['打席','打数','安打','二塁打','三塁打','本塁打','打点','得点','盗塁','四球','死球','三振','犠打','犠飛'];
+
+  sheets.forEach(sheet => {
+    const lastCol = sheet.getLastColumn();
+    if (lastCol !== OLD_LAST_COL) {
+      Logger.log(sheet.getName() + ': スキップ（列数=' + lastCol + '）');
+      return;
+    }
+
+    // 旧3行目のヘッダを読んで旧stats列の値を退避
+    // 旧レイアウト: col27=盗塁,col28=四球,col29=死球,col30=三振,col31=犠打,col32=犠飛
+    const OLD = { sb: 27, bb: 28, hbp: 29, so: 30, sac: 31, sf: 32 };
+
+    // 各打者行の旧データを読む
+    const playerData = [];
+    for (let o = 1; o <= BATTING_ORDERS; o++) {
+      const row = DATA_START + (o - 1) * ROWS_PER_ORDER;
+      const r = sheet.getRange(row, OLD.sb, 1, 6).getValues()[0];
+      playerData.push({ row, sb: r[0], bb: r[1], hbp: r[2], so: r[3], sac: r[4], sf: r[5] });
+    }
+
+    // col27〜40を一旦クリアして新ヘッダを設定
+    const totalRows = BATTING_ORDERS * ROWS_PER_ORDER;
+    const newColCount = newHeaders.length;
+
+    // 3行目（ヘッダ行）に新しいヘッダを書き込む
+    sheet.getRange(3, STATS_START, 1, newColCount).setValues([newHeaders]);
+
+    // 各打者行のデータを新レイアウトに書き込む
+    // 新レイアウト: col27=打席(数式),col28=打数,col29=安打,col30=二塁,col31=三塁,col32=本塁打,col33=打点,col34=得点,col35=盗塁,col36=四球,col37=死球,col38=三振,col39=犠打,col40=犠飛
+    playerData.forEach(p => {
+      // 打席〜本塁打はSUM数式を設定（col5〜col26の打席結果から集計）
+      // 一旦0で埋めてから盗塁以降の手動データを移行
+      sheet.getRange(p.row, STATS_START,     1, 6).setValues([[0, 0, 0, 0, 0, 0]]); // 打席〜本塁打
+      sheet.getRange(p.row, STATS_START + 6, 1, 1).setValue(0);       // 打点（新規）
+      sheet.getRange(p.row, STATS_START + 7, 1, 1).setValue(0);       // 得点（新規）
+      sheet.getRange(p.row, STATS_START + 8, 1, 1).setValue(p.sb);    // 盗塁（旧データ移行）
+      sheet.getRange(p.row, STATS_START + 9, 1, 1).setValue(p.bb);    // 四球
+      sheet.getRange(p.row, STATS_START + 10, 1, 1).setValue(p.hbp);  // 死球
+      sheet.getRange(p.row, STATS_START + 11, 1, 1).setValue(p.so);   // 三振
+      sheet.getRange(p.row, STATS_START + 12, 1, 1).setValue(p.sac);  // 犠打
+      sheet.getRange(p.row, STATS_START + 13, 1, 1).setValue(p.sf);   // 犠飛
+    });
+
+    Logger.log(sheet.getName() + ': 移行完了');
+  });
+
+  Logger.log('migrateLegacyBatterSheets 完了');
+}
