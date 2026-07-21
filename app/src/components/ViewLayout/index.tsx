@@ -16,6 +16,13 @@ export default function ViewLayout() {
             個人成績
           </Link>
           <Link
+            to="/view/ranking"
+            className={`text-xs md:text-sm px-2 py-1.5 md:px-3 md:py-2 rounded-lg transition-colors
+              ${pathname === '/view/ranking' ? 'bg-blue-500 text-white' : 'text-blue-200 hover:text-white'}`}
+          >
+            ランキング
+          </Link>
+          <Link
             to="/view/games"
             className={`text-xs md:text-sm px-2 py-1.5 md:px-3 md:py-2 rounded-lg transition-colors
               ${pathname === '/view/games' ? 'bg-blue-500 text-white' : 'text-blue-200 hover:text-white'}`}
