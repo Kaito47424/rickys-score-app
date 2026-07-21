@@ -133,10 +133,11 @@ export default function RankingPage() {
 
   // 野手
   const avgRanking = useMemo(() => buildRanking(qualifiedBatters, r => Number(r['打率'] ?? 0), fmt3), [qualifiedBatters])
-  const hrRanking = useMemo(() => buildRanking(batStats, r => Number(r['本塁打'] ?? 0), fmtInt), [batStats])
-  const rbiRanking = useMemo(() => buildRanking(batStats, r => Number(r['打点'] ?? 0), fmtInt), [batStats])
-  const sbRanking = useMemo(() => buildRanking(batStats, r => Number(r['盗塁'] ?? 0), fmtInt), [batStats])
+  const hrRanking = useMemo(() => buildRanking(batStats.filter(r => Number(r['本塁打'] ?? 0) > 0), r => Number(r['本塁打'] ?? 0), fmtInt), [batStats])
+  const rbiRanking = useMemo(() => buildRanking(batStats.filter(r => Number(r['打点'] ?? 0) > 0), r => Number(r['打点'] ?? 0), fmtInt), [batStats])
+  const sbRanking = useMemo(() => buildRanking(batStats.filter(r => Number(r['盗塁'] ?? 0) > 0), r => Number(r['盗塁'] ?? 0), fmtInt), [batStats])
   const opsRanking = useMemo(() => buildRanking(qualifiedBatters, r => Number(r['OPS'] ?? 0), fmt3), [qualifiedBatters])
+  const popRanking = useMemo(() => buildRanking(qualifiedBatters, r => Number(r['POP'] ?? 0), fmt3), [qualifiedBatters])
 
   // 投手
   const eraRanking = useMemo(() => buildRanking(pitchStats, r => Number(r['防御率(ERA)'] ?? 0), fmt3, true), [pitchStats])
@@ -189,6 +190,7 @@ export default function RankingPage() {
               <RankingCard title="打点ランキング" entries={rbiRanking} />
               <RankingCard title="盗塁ランキング" entries={sbRanking} />
               <RankingCard title={`OPSランキング（規定打席${(teamGames * 2.1).toFixed(1)}以上）`} entries={opsRanking} />
+              <RankingCard title={`POPランキング（規定打席${(teamGames * 2.1).toFixed(1)}以上）`} entries={popRanking} />
             </RankingSection>
 
             <RankingSection title="投手ランキング">
