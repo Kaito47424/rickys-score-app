@@ -35,6 +35,23 @@ function withBbHbp(rows: BatStat[]): BatStat[] {
   })
 }
 
+type SortDir = 'asc' | 'desc'
+
+function sortRows<T extends BatStat | PitchStat>(rows: T[], sortCol: string | null, sortDir: SortDir): T[] {
+  if (!sortCol) return rows
+  const sorted = [...rows].sort((a, b) => {
+    if (sortCol === '選手名') {
+      return String(a[sortCol] ?? '').localeCompare(String(b[sortCol] ?? ''), 'ja')
+    }
+    const av = Number(a[sortCol])
+    const bv = Number(b[sortCol])
+    const an = isNaN(av) ? -Infinity : av
+    const bn = isNaN(bv) ? -Infinity : bv
+    return an - bn
+  })
+  return sortDir === 'desc' ? sorted.reverse() : sorted
+}
+
 export default function StatsPage() {
   const [tab, setTab] = useState<'bat' | 'pitch'>('bat')
   const [batStats, setBatStats]     = useState<BatStat[]>([])
@@ -46,6 +63,8 @@ export default function StatsPage() {
   const [yearFilter, setYearFilter] = useState<string>('all')
   const [games, setGames] = useState<GameInfo[]>([])
   const [availableYears, setAvailableYears] = useState<string[]>([])
+  const [sortCol, setSortCol] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
 
   useEffect(() => {
     loadGames()
@@ -86,8 +105,18 @@ export default function StatsPage() {
 
   const handleTab = (t: 'bat' | 'pitch') => {
     setTab(t)
+    setSortCol(null)
     if (t === 'bat') loadBat()
     if (t === 'pitch') loadPitch()
+  }
+
+  const handleSort = (col: string) => {
+    if (col === sortCol) {
+      setSortDir(d => (d === 'desc' ? 'asc' : 'desc'))
+    } else {
+      setSortCol(col)
+      setSortDir(col === '選手名' ? 'asc' : 'desc')
+    }
   }
 
   const teamGames = useMemo(() => countTeamGames(games, yearFilter), [games, yearFilter])
@@ -102,6 +131,11 @@ export default function StatsPage() {
 
   const qualifiedBatRows = batRowsWithQualification.filter(r => r.qualified).map(r => r.row)
   const unqualifiedBatRows = batRowsWithQualification.filter(r => !r.qualified).map(r => r.row)
+
+  // 規定打席以上/未満のグループはそのまま維持し、各グループ内だけソートする
+  const sortedQualifiedBatRows = useMemo(() => sortRows(qualifiedBatRows, sortCol, sortDir), [qualifiedBatRows, sortCol, sortDir])
+  const sortedUnqualifiedBatRows = useMemo(() => sortRows(unqualifiedBatRows, sortCol, sortDir), [unqualifiedBatRows, sortCol, sortDir])
+  const sortedPitchStats = useMemo(() => sortRows(pitchStats, sortCol, sortDir), [pitchStats, sortCol, sortDir])
 
   const cols    = tab === 'bat' ? BAT_COLS : PIT_COLS
   const loading = tab === 'bat' ? batLoading : pitchLoading
@@ -198,10 +232,12 @@ export default function StatsPage() {
                   {cols.map(c => (
                     <th
                       key={c}
-                      className={`px-3 py-2.5 text-xs font-semibold text-gray-500 border-b whitespace-nowrap
+                      onClick={() => handleSort(c)}
+                      className={`px-3 py-2.5 text-xs font-semibold border-b whitespace-nowrap cursor-pointer select-none hover:text-blue-600
+                        ${sortCol === c ? 'text-blue-600' : 'text-gray-500'}
                         ${c === '選手名' ? 'text-left sticky left-0 bg-gray-50 z-10' : 'text-right'}`}
                     >
-                      {c}
+                      {c}{sortCol === c ? (sortDir === 'desc' ? ' ▼' : ' ▲') : ''}
                     </th>
                   ))}
                 </tr>
@@ -209,18 +245,18 @@ export default function StatsPage() {
               <tbody>
                 {tab === 'bat' ? (
                   <>
-                    {qualifiedBatRows.map((row, i) => renderRow(row, `q-${i}`, false))}
-                    {unqualifiedBatRows.length > 0 && (
+                    {sortedQualifiedBatRows.map((row, i) => renderRow(row, `q-${i}`, false))}
+                    {sortedUnqualifiedBatRows.length > 0 && (
                       <tr>
                         <td colSpan={cols.length} className="px-3 py-1.5 border-b border-gray-100 text-xs text-gray-400 bg-gray-50">
                           規定打席未満（規定打席: {(teamGames * 2.1).toFixed(1)}）
                         </td>
                       </tr>
                     )}
-                    {unqualifiedBatRows.map((row, i) => renderRow(row, `u-${i}`, true))}
+                    {sortedUnqualifiedBatRows.map((row, i) => renderRow(row, `u-${i}`, true))}
                   </>
                 ) : (
-                  pitchStats.map((row, i) => renderRow(row, `p-${i}`, false))
+                  sortedPitchStats.map((row, i) => renderRow(row, `p-${i}`, false))
                 )}
               </tbody>
             </table>
