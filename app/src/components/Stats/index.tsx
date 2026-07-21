@@ -226,6 +226,7 @@ export default function StatsPage() {
           <p className="text-gray-400 text-center py-16">データがありません</p>
         ) : (
           <div className="overflow-x-auto">
+            <p className="text-xs text-gray-400 px-1 py-1.5">列見出しをクリックすると、その項目で並び替えできます</p>
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-gray-50 sticky top-0">
@@ -233,11 +234,15 @@ export default function StatsPage() {
                     <th
                       key={c}
                       onClick={() => handleSort(c)}
-                      className={`px-3 py-2.5 text-xs font-semibold border-b whitespace-nowrap cursor-pointer select-none hover:text-blue-600
+                      title="クリックで並び替え"
+                      className={`px-3 py-2.5 text-xs font-semibold border-b whitespace-nowrap cursor-pointer select-none hover:text-blue-600 hover:bg-blue-50
                         ${sortCol === c ? 'text-blue-600' : 'text-gray-500'}
                         ${c === '選手名' ? 'text-left sticky left-0 bg-gray-50 z-10' : 'text-right'}`}
                     >
-                      {c}{sortCol === c ? (sortDir === 'desc' ? ' ▼' : ' ▲') : ''}
+                      {c}
+                      <span className={sortCol === c ? '' : 'text-gray-300'}>
+                        {sortCol === c ? (sortDir === 'desc' ? ' ▼' : ' ▲') : ' ⇅'}
+                      </span>
                     </th>
                   ))}
                 </tr>
