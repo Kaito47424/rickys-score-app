@@ -437,6 +437,10 @@ function _getGameData(gameId) {
 function _apiCreateGame(data) {
   // gas_script.js の createNewGame を呼び出す想定
   // 単体でも動くよう最小実装
+  // 注: 現状ここでは実際に何もシートを作成していない（実際の試合作成は
+  // main.gs の createNewGame() メニュー実行時のみ）。そのためSupabaseミラーも
+  // ここには追加していない（追加すると実体のないgames行だけ作られてしまう）。
+  // ミラーは createNewGame() 側に実装している。
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const { gameDate, opponent } = data;
   if (!gameDate || !opponent) throw new Error('gameDate / opponent が必要です');
@@ -475,6 +479,22 @@ function _apiSaveRoster(data) {
       batSheet.getRange(rowTop + 1, 4).setValue(r.subPosition || '');
     }
   });
+
+  // Supabaseミラー。subFromInningはスプシには保存されないが、ここでは
+  // 送信されたペイロードの値をそのままミラー先に永続化する
+  _supabaseUpsert(
+    'roster_entries',
+    roster.map(r => ({
+      game_id: gameId,
+      batting_order: r.order,
+      name: r.name,
+      position: r.position || null,
+      sub_name: r.subName || null,
+      sub_position: r.subPosition || null,
+      sub_from_inning: r.subFromInning ?? null,
+    })),
+    'game_id,batting_order',
+  );
 }
 
 function _apiInning(data) {
@@ -500,6 +520,48 @@ function _apiInning(data) {
       _writePitcherStats(oppSheet, data.pitcherStats || []);
     }
   }
+
+  // Supabaseミラー（S1: スプシ書き込み後に並行して同期。失敗してもここには影響しない）
+  _mirrorInning(gameId, inning, round, roster, batterResults, pitcherResults, rbiData, data.pitcherStats || [], oppName ? ss.getSheetByName(oppName) : null);
+}
+
+function _mirrorInning(gameId, inning, round, roster, batterResults, pitcherResults, rbiData, pitcherStats, oppSheet) {
+  const batRows = [];
+  const manualStatsRows = [];
+  (roster || []).forEach(r => {
+    const entry = batterResults[String(r.order)];
+    const code = typeof entry === 'string' ? entry : (entry && entry.code) || '';
+    const runCode = typeof entry === 'object' && entry ? (entry.runCode || null) : null;
+    if (code) {
+      batRows.push({ game_id: gameId, batting_order: r.order, inning, round, code, run_code: runCode });
+    }
+    const rbiEntry = rbiData[String(r.order)];
+    if (rbiEntry !== undefined) {
+      manualStatsRows.push({ game_id: gameId, batting_order: r.order, rbi: rbiEntry.rbi, runs: rbiEntry.runs, sb: rbiEntry.sb });
+    }
+  });
+  _supabaseUpsert('bat_results', batRows, 'game_id,batting_order,inning,round');
+  _supabaseUpsert('batter_manual_stats', manualStatsRows, 'game_id,batting_order');
+
+  const pitchRows = [];
+  for (let order = 1; order <= 9; order++) {
+    const pr = pitcherResults[String(order)] || { code: '', pitcher: '' };
+    if (pr.code || pr.pitcher) {
+      pitchRows.push({ game_id: gameId, opponent_order: order, inning, round, code: pr.code || null, pitcher_name: pr.pitcher || null });
+    }
+  }
+  _supabaseUpsert('pitch_results', pitchRows, 'game_id,opponent_order,inning,round');
+
+  // 投球回(IP)はAPI経由で送信されず、スプシに直接手入力される値のため
+  // ミラー時にシートから読み直して同期する。行番号は_writePitcherStatsと同じ
+  // 「配列インデックスiがそのままrow=15+i」というルールに合わせる（詰めない）
+  const appearanceRows = [];
+  (pitcherStats || []).forEach((ps, i) => {
+    if (i >= 7 || !ps.name) return;
+    const ip = oppSheet ? String(oppSheet.getRange(15 + i, 2).getValue() ?? '') : null;
+    appearanceRows.push({ game_id: gameId, pitcher_name: ps.name, ip: ip || null, r: ps.r, er: ps.er });
+  });
+  _supabaseUpsert('pitcher_appearances', appearanceRows, 'game_id,pitcher_name');
 }
 
 // ==================== 修正履歴 ====================
@@ -527,6 +589,17 @@ function _logEdit(data) {
 
   const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
   sheet.appendRow([timestamp, gameId, editType, inning ?? '', round ?? '', order ?? '', oldValue ?? '', newValue ?? '']);
+
+  _supabaseInsert('edit_log', [{
+    logged_at: timestamp,
+    game_id: gameId,
+    edit_type: editType,
+    inning: inning ?? null,
+    round: round ?? null,
+    batting_order: order ?? null,
+    old_value: oldValue ?? null,
+    new_value: newValue ?? null,
+  }]);
 }
 
 function _getEditLog(gameId) {
@@ -570,6 +643,10 @@ function _deleteGame(data) {
       }
     }
   }
+
+  // Supabaseミラー。スプシ側のバグ(2回表の得点セルに"deleted"を書く挙動)は
+  // 踏襲せず、deleted_atへ正しく反映する
+  _supabaseUpdate('games', 'game_id', gameId, { deleted_at: new Date().toISOString() });
 }
 
 function _saveMvp(data) {
@@ -589,10 +666,12 @@ function _saveMvp(data) {
   for (let i = 1; i < data_.length; i++) {
     if (String(data_[i][0]) === String(gameId)) {
       sheet.getRange(i + 1, 1, 1, 3).setValues([[gameId, name, reason ?? '']]);
+      _supabaseUpsert('mvp', [{ game_id: gameId, name, reason: reason || null }], 'game_id');
       return;
     }
   }
   sheet.appendRow([gameId, name, reason ?? '']);
+  _supabaseUpsert('mvp', [{ game_id: gameId, name, reason: reason || null }], 'game_id');
 }
 
 function _getMvp(gameId) {
