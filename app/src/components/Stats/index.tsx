@@ -2,17 +2,36 @@ import { useEffect, useMemo, useState } from 'react'
 import type { BatStat, PitchStat } from '../../types'
 import { fetchBatStats, fetchPitchStats, fetchGames } from '../../api/gas'
 
-const BAT_COLS  = ['選手名', '試合数', '打席', '打数', '安打', '打率', '出塁率(OBP)', 'OPS', '三振率(K%)', 'POP', '走者なし打率', '走者あり打率', '得点圏打率', '本塁打', '打点', '得点', '盗塁', '失策出塁', 'MVP'] as const
-const PIT_COLS  = ['選手名', '登板試合数', '投球回', '被安打', '奪三振', '四球', '失点', '自責点', '防御率(ERA)'] as const
+// 各試合ページ(GameSummary/index.tsx の BAT_COL_MAP/PIT_COL_MAP)と基本項目を揃えている
+const BAT_COLS  = [
+  '選手名', '試合数',
+  '打席', '打数', '安打', '二塁打', '三塁打', '本塁打', '打点', '得点', '盗塁',
+  '四球', '死球', '四死球数', '三振', '犠打', '犠飛', '失策出塁',
+  '打率', '出塁率(OBP)', '長打率(SLG)', 'OPS', '四死球率',
+  '三振率(K%)', 'POP', '走者なし打率', '走者あり打率', '得点圏打率', 'MVP',
+] as const
+const PIT_COLS  = ['選手名', '登板試合数', '投球回', '被安打', '被本塁打', '奪三振', '四球', '死球', '失点', '自責点', '防御率(ERA)'] as const
 
 const LOWER_IS_BETTER = new Set(['防御率(ERA)'])
+
+const RATE_COLS = ['打率', 'OPS', '防御率(ERA)', '出塁率(OBP)', '長打率(SLG)', 'フライ率(FB%)', 'POP', '三振率(K%)', '走者なし打率', '走者あり打率', '得点圏打率', '四死球率']
 
 function fmt(v: string | number, col: string): string {
   if (v === null || v === undefined || v === '') return '—'
   const n = Number(v)
   if (isNaN(n)) return String(v)
-  if (['打率', 'OPS', '防御率(ERA)', '出塁率(OBP)', '長打率(SLG)', 'フライ率(FB%)', 'POP', '三振率(K%)', '走者なし打率', '走者あり打率', '得点圏打率'].includes(col)) return n.toFixed(3)
+  if (RATE_COLS.includes(col)) return n.toFixed(3)
   return String(v)
+}
+
+// 四死球数(=四球+死球)・四死球率(=四死球数/打席)を追加する
+function withBbHbp(rows: BatStat[]): BatStat[] {
+  return rows.map((r): BatStat => {
+    const bb = Number(r['四球'] ?? 0)
+    const hbp = Number(r['死球'] ?? 0)
+    const pa = Number(r['打席'] ?? 0)
+    return { ...r, '四死球数': bb + hbp, '四死球率': pa > 0 ? (bb + hbp) / pa : 0 }
+  })
 }
 
 export default function StatsPage() {
@@ -74,13 +93,13 @@ export default function StatsPage() {
   }
 
   const cols    = tab === 'bat' ? BAT_COLS : PIT_COLS
-  const rows    = tab === 'bat' ? batStats : pitchStats
+  const rows    = tab === 'bat' ? withBbHbp(batStats) : pitchStats
   const loading = tab === 'bat' ? batLoading : pitchLoading
   const error   = tab === 'bat' ? batError : pitchError
 
   const bestValues = useMemo<Record<string, number>>(() => {
     const currentCols = tab === 'bat' ? BAT_COLS : PIT_COLS
-    const currentRows = tab === 'bat' ? batStats : pitchStats
+    const currentRows = tab === 'bat' ? withBbHbp(batStats) : pitchStats
     if (currentRows.length === 0) return {}
     const result: Record<string, number> = {}
     for (const col of currentCols) {
