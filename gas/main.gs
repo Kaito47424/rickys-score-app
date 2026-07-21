@@ -479,6 +479,9 @@ function createNewGame() {
   _createBatterSheet(ss, gameId, gameDate, opponent, batterSheetName);
   _createOpponentBatSheet(ss, gameId, gameDate, opponent, oppSheetName);
 
+  // Supabaseミラー（S1）。試合作成の実体はここだけなので、ここで games 行を作る
+  _supabaseUpsert('games', [{ game_id: gameId, game_date: gameDate, opponent, deleted_at: null }], 'game_id');
+
   ui.alert(
     '作成完了',
     `試合 ${gameId}（${gameDate} vs ${opponent}）のシートを作成しました。\n\n` +

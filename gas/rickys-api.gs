@@ -386,12 +386,12 @@ function _getGameData(gameId) {
     stats.runs = rbiInfo.runs;
     stats.sb = rbiInfo.sb;
     
-    // 打率・OPSを計算
+    // 打率・出塁率・長打率・OPSを計算
     stats.avg = stats.ab > 0 ? stats.h / stats.ab : 0;
     const obpDen = stats.ab + stats.bb + stats.hbp + stats.sf;
-    const obp = obpDen > 0 ? (stats.h + stats.bb + stats.hbp + stats.e) / obpDen : 0;
-    const slg = stats.ab > 0 ? (stats.h + stats.d2 * 2 + stats.d3 * 3 + stats.hr * 4) / stats.ab : 0;
-    stats.ops = obp + slg;
+    stats.obp = obpDen > 0 ? (stats.h + stats.bb + stats.hbp + stats.e) / obpDen : 0;
+    stats.slg = stats.ab > 0 ? (stats.h + stats.d2 * 2 + stats.d3 * 3 + stats.hr * 4) / stats.ab : 0;
+    stats.ops = stats.obp + stats.slg;
     
     batStats.push(stats);
   });
@@ -437,6 +437,10 @@ function _getGameData(gameId) {
 function _apiCreateGame(data) {
   // gas_script.js の createNewGame を呼び出す想定
   // 単体でも動くよう最小実装
+  // 注: 現状ここでは実際に何もシートを作成していない（実際の試合作成は
+  // main.gs の createNewGame() メニュー実行時のみ）。そのためSupabaseミラーも
+  // ここには追加していない（追加すると実体のないgames行だけ作られてしまう）。
+  // ミラーは createNewGame() 側に実装している。
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const { gameDate, opponent } = data;
   if (!gameDate || !opponent) throw new Error('gameDate / opponent が必要です');
@@ -475,6 +479,22 @@ function _apiSaveRoster(data) {
       batSheet.getRange(rowTop + 1, 4).setValue(r.subPosition || '');
     }
   });
+
+  // Supabaseミラー。subFromInningはスプシには保存されないが、ここでは
+  // 送信されたペイロードの値をそのままミラー先に永続化する
+  _supabaseUpsert(
+    'roster_entries',
+    roster.map(r => ({
+      game_id: gameId,
+      batting_order: r.order,
+      name: r.name,
+      position: r.position || null,
+      sub_name: r.subName || null,
+      sub_position: r.subPosition || null,
+      sub_from_inning: r.subFromInning ?? null,
+    })),
+    'game_id,batting_order',
+  );
 }
 
 function _apiInning(data) {
@@ -500,6 +520,48 @@ function _apiInning(data) {
       _writePitcherStats(oppSheet, data.pitcherStats || []);
     }
   }
+
+  // Supabaseミラー（S1: スプシ書き込み後に並行して同期。失敗してもここには影響しない）
+  _mirrorInning(gameId, inning, round, roster, batterResults, pitcherResults, rbiData, data.pitcherStats || [], oppName ? ss.getSheetByName(oppName) : null);
+}
+
+function _mirrorInning(gameId, inning, round, roster, batterResults, pitcherResults, rbiData, pitcherStats, oppSheet) {
+  const batRows = [];
+  const manualStatsRows = [];
+  (roster || []).forEach(r => {
+    const entry = batterResults[String(r.order)];
+    const code = typeof entry === 'string' ? entry : (entry && entry.code) || '';
+    const runCode = typeof entry === 'object' && entry ? (entry.runCode || null) : null;
+    if (code) {
+      batRows.push({ game_id: gameId, batting_order: r.order, inning, round, code, run_code: runCode });
+    }
+    const rbiEntry = rbiData[String(r.order)];
+    if (rbiEntry !== undefined) {
+      manualStatsRows.push({ game_id: gameId, batting_order: r.order, rbi: rbiEntry.rbi, runs: rbiEntry.runs, sb: rbiEntry.sb });
+    }
+  });
+  _supabaseUpsert('bat_results', batRows, 'game_id,batting_order,inning,round');
+  _supabaseUpsert('batter_manual_stats', manualStatsRows, 'game_id,batting_order');
+
+  const pitchRows = [];
+  for (let order = 1; order <= 9; order++) {
+    const pr = pitcherResults[String(order)] || { code: '', pitcher: '' };
+    if (pr.code || pr.pitcher) {
+      pitchRows.push({ game_id: gameId, opponent_order: order, inning, round, code: pr.code || null, pitcher_name: pr.pitcher || null });
+    }
+  }
+  _supabaseUpsert('pitch_results', pitchRows, 'game_id,opponent_order,inning,round');
+
+  // 投球回(IP)はAPI経由で送信されず、スプシに直接手入力される値のため
+  // ミラー時にシートから読み直して同期する。行番号は_writePitcherStatsと同じ
+  // 「配列インデックスiがそのままrow=15+i」というルールに合わせる（詰めない）
+  const appearanceRows = [];
+  (pitcherStats || []).forEach((ps, i) => {
+    if (i >= 7 || !ps.name) return;
+    const ip = oppSheet ? String(oppSheet.getRange(15 + i, 2).getValue() ?? '') : null;
+    appearanceRows.push({ game_id: gameId, pitcher_name: ps.name, ip: ip || null, r: ps.r, er: ps.er });
+  });
+  _supabaseUpsert('pitcher_appearances', appearanceRows, 'game_id,pitcher_name');
 }
 
 // ==================== 修正履歴 ====================
@@ -527,6 +589,17 @@ function _logEdit(data) {
 
   const timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
   sheet.appendRow([timestamp, gameId, editType, inning ?? '', round ?? '', order ?? '', oldValue ?? '', newValue ?? '']);
+
+  _supabaseInsert('edit_log', [{
+    logged_at: timestamp,
+    game_id: gameId,
+    edit_type: editType,
+    inning: inning ?? null,
+    round: round ?? null,
+    batting_order: order ?? null,
+    old_value: oldValue ?? null,
+    new_value: newValue ?? null,
+  }]);
 }
 
 function _getEditLog(gameId) {
@@ -570,6 +643,10 @@ function _deleteGame(data) {
       }
     }
   }
+
+  // Supabaseミラー。スプシ側のバグ(2回表の得点セルに"deleted"を書く挙動)は
+  // 踏襲せず、deleted_atへ正しく反映する
+  _supabaseUpdate('games', 'game_id', gameId, { deleted_at: new Date().toISOString() });
 }
 
 function _saveMvp(data) {
@@ -589,10 +666,12 @@ function _saveMvp(data) {
   for (let i = 1; i < data_.length; i++) {
     if (String(data_[i][0]) === String(gameId)) {
       sheet.getRange(i + 1, 1, 1, 3).setValues([[gameId, name, reason ?? '']]);
+      _supabaseUpsert('mvp', [{ game_id: gameId, name, reason: reason || null }], 'game_id');
       return;
     }
   }
   sheet.appendRow([gameId, name, reason ?? '']);
+  _supabaseUpsert('mvp', [{ game_id: gameId, name, reason: reason || null }], 'game_id');
 }
 
 function _getMvp(gameId) {
@@ -643,10 +722,16 @@ function _writeBatterInning(sheet, inning, round, roster, batterResults, rbiData
     const cellValue = runCode ? `${hitCode}/${runCode}` : hitCode;
     if (cellValue) sheet.getRange(rowTop, col).setValue(cellValue);
 
-    // 打点・得点・盗塁（集計列はスプシ数式側で集計しているため個別列に書く）
-    const rbi = rbiData[String(r.order)] || { rbi: 0, runs: 0, sb: 0 };
-    // RBI/得点/盗塁は集計列（S列〜）に加算ではなく専用列があればそこへ
-    // ※ スプシの設計に合わせて必要なら調整
+    // 打点・得点・盗塁（_getGameData の r[STATS+5〜7] と対称: 1始まりで STATS+6〜8列目）
+    // rbiData にキーが存在するイニングの送信時のみ書き込む（他イニング送信で上書きしない）
+    const INNINGS = 11, ROUNDS = 2;
+    const STATS = AB_START + INNINGS * ROUNDS; // 5 + 22 = 27
+    const rbiEntry = rbiData[String(r.order)];
+    if (rbiEntry !== undefined) {
+      sheet.getRange(rowTop, STATS + 6).setValue(rbiEntry.rbi);
+      sheet.getRange(rowTop, STATS + 7).setValue(rbiEntry.runs);
+      sheet.getRange(rowTop, STATS + 8).setValue(rbiEntry.sb);
+    }
   });
 }
 
@@ -716,4 +801,72 @@ function _findSheet(ss, exactName, gameId, opponent, prefix) {
     s.startsWith(`${prefix}_${gameId}_`) && s.endsWith(`_${opponent}`)
   );
   return found || null;
+}
+
+// ==================== 移行用 ====================
+
+// 旧フォーマット（32列）の野手シートを新フォーマット（40列）に移行する
+// ※実行前にスプレッドシートをバックアップしてください
+function migrateLegacyBatterSheets() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheets = ss.getSheets().filter(s => s.getName().startsWith('野手_'));
+
+  const OLD_LAST_COL = 32;
+  const STATS_START  = 27; // AA列
+  const AB_START     = 5;
+  const INNINGS      = 11;
+  const ROUNDS       = 2;
+  const DATA_START   = 4;
+  const ROWS_PER_ORDER = 2;
+  const BATTING_ORDERS = 9;
+
+  // 新しいヘッダ（STATS_START〜STATS_START+13）
+  const newHeaders = ['打席','打数','安打','二塁打','三塁打','本塁打','打点','得点','盗塁','四球','死球','三振','犠打','犠飛'];
+
+  sheets.forEach(sheet => {
+    const lastCol = sheet.getLastColumn();
+    if (lastCol !== OLD_LAST_COL) {
+      Logger.log(sheet.getName() + ': スキップ（列数=' + lastCol + '）');
+      return;
+    }
+
+    // 旧3行目のヘッダを読んで旧stats列の値を退避
+    // 旧レイアウト: col27=盗塁,col28=四球,col29=死球,col30=三振,col31=犠打,col32=犠飛
+    const OLD = { sb: 27, bb: 28, hbp: 29, so: 30, sac: 31, sf: 32 };
+
+    // 各打者行の旧データを読む
+    const playerData = [];
+    for (let o = 1; o <= BATTING_ORDERS; o++) {
+      const row = DATA_START + (o - 1) * ROWS_PER_ORDER;
+      const r = sheet.getRange(row, OLD.sb, 1, 6).getValues()[0];
+      playerData.push({ row, sb: r[0], bb: r[1], hbp: r[2], so: r[3], sac: r[4], sf: r[5] });
+    }
+
+    // col27〜40を一旦クリアして新ヘッダを設定
+    const totalRows = BATTING_ORDERS * ROWS_PER_ORDER;
+    const newColCount = newHeaders.length;
+
+    // 3行目（ヘッダ行）に新しいヘッダを書き込む
+    sheet.getRange(3, STATS_START, 1, newColCount).setValues([newHeaders]);
+
+    // 各打者行のデータを新レイアウトに書き込む
+    // 新レイアウト: col27=打席(数式),col28=打数,col29=安打,col30=二塁,col31=三塁,col32=本塁打,col33=打点,col34=得点,col35=盗塁,col36=四球,col37=死球,col38=三振,col39=犠打,col40=犠飛
+    playerData.forEach(p => {
+      // 打席〜本塁打はSUM数式を設定（col5〜col26の打席結果から集計）
+      // 一旦0で埋めてから盗塁以降の手動データを移行
+      sheet.getRange(p.row, STATS_START,     1, 6).setValues([[0, 0, 0, 0, 0, 0]]); // 打席〜本塁打
+      sheet.getRange(p.row, STATS_START + 6, 1, 1).setValue(0);       // 打点（新規）
+      sheet.getRange(p.row, STATS_START + 7, 1, 1).setValue(0);       // 得点（新規）
+      sheet.getRange(p.row, STATS_START + 8, 1, 1).setValue(p.sb);    // 盗塁（旧データ移行）
+      sheet.getRange(p.row, STATS_START + 9, 1, 1).setValue(p.bb);    // 四球
+      sheet.getRange(p.row, STATS_START + 10, 1, 1).setValue(p.hbp);  // 死球
+      sheet.getRange(p.row, STATS_START + 11, 1, 1).setValue(p.so);   // 三振
+      sheet.getRange(p.row, STATS_START + 12, 1, 1).setValue(p.sac);  // 犠打
+      sheet.getRange(p.row, STATS_START + 13, 1, 1).setValue(p.sf);   // 犠飛
+    });
+
+    Logger.log(sheet.getName() + ': 移行完了');
+  });
+
+  Logger.log('migrateLegacyBatterSheets 完了');
 }

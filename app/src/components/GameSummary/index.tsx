@@ -1,36 +1,52 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import type { GameData, BatterEntry } from '../../types'
+import type { GameData, BatterEntry, BatStat } from '../../types'
 import { fetchGameData } from '../../api/gas'
 import { RESULT_CODES } from '../../constants/codes'
 
 // 野手成績: APIプロパティ名(英語) → 表示カラム名(日本語)
+// 個人成績ページ(Stats/index.tsx の BAT_COLS)と基本項目を揃えている
 const BAT_COL_MAP: [string, string][] = [
   ['name', '選手名'],
   ['pa', '打席'],
   ['ab', '打数'],
   ['h', '安打'],
-  ['avg', '打率'],
+  ['d2', '二塁打'],
+  ['d3', '三塁打'],
   ['hr', '本塁打'],
   ['rbi', '打点'],
   ['runs', '得点'],
   ['sb', '盗塁'],
+  ['bb', '四球'],
+  ['hbp', '死球'],
+  ['bbhbp', '四死球数'],
+  ['so', '三振'],
+  ['sac', '犠打'],
+  ['sf', '犠飛'],
+  ['e', '失策出塁'],
+  ['avg', '打率'],
+  ['obp', '出塁率(OBP)'],
+  ['slg', '長打率(SLG)'],
   ['ops', 'OPS'],
+  ['bbhbpRate', '四死球率'],
 ]
 
 // 投手成績: APIプロパティ名(英語) → 表示カラム名(日本語)
+// 個人成績ページ(Stats/index.tsx の PIT_COLS)と基本項目を揃えている
 const PIT_COL_MAP: [string, string][] = [
   ['name', '選手名'],
   ['ip', '投球回'],
   ['h', '被安打'],
+  ['hr', '被本塁打'],
   ['so', '奪三振'],
   ['bb', '四球'],
+  ['hbp', '死球'],
   ['r', '失点'],
   ['er', '自責点'],
   ['era', '防御率'],
 ]
 
-const RATE_KEYS = new Set(['avg', 'ops', 'era'])
+const RATE_KEYS = new Set(['avg', 'ops', 'era', 'obp', 'slg', 'bbhbpRate'])
 
 function fmt(v: unknown, key: string): string {
   if (v === null || v === undefined || v === '') return '—'
@@ -82,6 +98,14 @@ export default function GameSummary() {
   const scoreboard = gameData.scoreboard ?? { rickys: [], opponent: [], total: { rickys: 0, opponent: 0 } }
   const batStats = gameData.batStats ?? []
   const pitchStats = gameData.pitchStats ?? []
+
+  // 表示用: 四死球数・四死球率(=(四球+死球)/打席)を追加
+  const batStatsDisplay: BatStat[] = batStats.map((p): BatStat => {
+    const bb = Number(p.bb ?? 0)
+    const hbp = Number(p.hbp ?? 0)
+    const pa = Number(p.pa ?? 0)
+    return { ...p, bbhbp: bb + hbp, bbhbpRate: pa > 0 ? (bb + hbp) / pa : 0 }
+  })
 
   // スコアボード: データがあるイニング数を算出（末尾の0を除く）
   const maxInning = Math.max(
@@ -280,7 +304,7 @@ export default function GameSummary() {
                 </tr>
               </thead>
               <tbody>
-                {batStats.map((player, i) => (
+                {batStatsDisplay.map((player, i) => (
                   <tr key={String(player.order ?? i)} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
                     {BAT_COL_MAP.map(([key]) => (
                       <td
