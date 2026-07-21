@@ -4,7 +4,6 @@ import { fetchBatStats, fetchPitchStats, fetchGames } from '../../api/gas'
 import { isQualifiedBatter, countTeamGames } from '../../utils/qualification'
 
 const TOP_N = 5
-const MIN_IP_FOR_ERA = 3
 
 type RankEntry = { name: string; value: number }
 
@@ -83,10 +82,7 @@ export default function RankingPage() {
   const avgRanking = useMemo(() => rank(qualifiedBatters, '打率'), [qualifiedBatters])
   const hrRanking = useMemo(() => rank(batStats, '本塁打'), [batStats])
   const opsRanking = useMemo(() => rank(qualifiedBatters, 'OPS'), [qualifiedBatters])
-  const eraRanking = useMemo(
-    () => rank(pitchStats.filter(r => Number(r['投球回'] ?? 0) >= MIN_IP_FOR_ERA), '防御率(ERA)', true),
-    [pitchStats],
-  )
+  const eraRanking = useMemo(() => rank(pitchStats, '防御率(ERA)', true), [pitchStats])
 
   return (
     <div className="flex flex-col h-full">
@@ -119,7 +115,7 @@ export default function RankingPage() {
             <RankingCard title={`打率ランキング（規定打席${(teamGames * 2.1).toFixed(1)}以上）`} entries={avgRanking} fmt={fmtRate} />
             <RankingCard title="本塁打ランキング" entries={hrRanking} fmt={v => String(v)} />
             <RankingCard title={`OPSランキング（規定打席${(teamGames * 2.1).toFixed(1)}以上）`} entries={opsRanking} fmt={fmtRate} />
-            <RankingCard title={`防御率ランキング（投球回${MIN_IP_FOR_ERA}以上）`} entries={eraRanking} fmt={fmtRate} />
+            <RankingCard title="防御率ランキング" entries={eraRanking} fmt={fmtRate} />
           </div>
         )}
       </div>
