@@ -23,6 +23,12 @@ export function outsForCode(code: string): number {
   return 0
 }
 
+// 野手タブのアウトカウント表示用（打撃結果に加え、走塁での出塁死も加算する）
+export function outsForBatterEntry(entry: { code: string; runCode: string | null }): number {
+  const runOut = entry.runCode && (RUN_CODES as readonly string[]).includes(entry.runCode) ? 1 : 0
+  return outsForCode(entry.code) + runOut
+}
+
 export const POSITIONS = ['投','捕','一','二','三','遊','左','中','右','指',''] as const
 
 export const DEFAULT_ROSTER_NAMES = [
