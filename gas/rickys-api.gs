@@ -386,12 +386,12 @@ function _getGameData(gameId) {
     stats.runs = rbiInfo.runs;
     stats.sb = rbiInfo.sb;
     
-    // 打率・OPSを計算
+    // 打率・出塁率・長打率・OPSを計算
     stats.avg = stats.ab > 0 ? stats.h / stats.ab : 0;
     const obpDen = stats.ab + stats.bb + stats.hbp + stats.sf;
-    const obp = obpDen > 0 ? (stats.h + stats.bb + stats.hbp + stats.e) / obpDen : 0;
-    const slg = stats.ab > 0 ? (stats.h + stats.d2 * 2 + stats.d3 * 3 + stats.hr * 4) / stats.ab : 0;
-    stats.ops = obp + slg;
+    stats.obp = obpDen > 0 ? (stats.h + stats.bb + stats.hbp + stats.e) / obpDen : 0;
+    stats.slg = stats.ab > 0 ? (stats.h + stats.d2 * 2 + stats.d3 * 3 + stats.hr * 4) / stats.ab : 0;
+    stats.ops = stats.obp + stats.slg;
     
     batStats.push(stats);
   });
