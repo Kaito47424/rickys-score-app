@@ -54,11 +54,11 @@
 | 4 | 4-4 | 今季ランキング表示（打率・本塁打・防御率・OPS） | `feat` | 💡 アイデア | 🔴 | 未定 | 詳細: docs/design/4-ranking.md |
 | 4 | 4-5 | 打順別成績分析 | `feat` | 💡 アイデア | 🟡 | 未定 | BAT_RAW_PBP活用・GET getRawPbp追加必要 |
 | 4 | 4-6 | 打線ヒートマップ | `feat` | 💡 アイデア | 🟡 | 未定 | 全試合横断・キャッシュ機構検討・詳細: docs/design/4-heatmap.md |
-| S1 | S1-1 | Supabaseプロジェクト作成・テーブル作成 | `feat` | 💡 アイデア | 🔴 | 未定 | 移行の起点・詳細: docs/design/s1-supabase.md |
-| S1 | S1-2 | 既存スプシデータをSupabaseにインポート | `chore` | 💡 アイデア | 🔴 | 未定 | CSVエクスポート活用 |
-| S1 | S1-3 | GAS _writeInningにSupabase書き込みを追加 | `feat` | 💡 アイデア | 🔴 | 未定 | スプシへの書き込みは残す・並行運用 |
-| S1 | S1-4 | GAS _apiCreateGameにSupabase書き込みを追加 | `feat` | 💡 アイデア | 🔴 | 未定 | |
-| S1 | S1-5 | 動作確認（スプシとSupabaseの整合性チェック） | `chore` | 💡 アイデア | 🔴 | 未定 | |
+| S1 | S1-1 | Supabaseプロジェクト作成・テーブル作成 | `feat` | ✅ 完了 | 🔴 | 未定 | 移行の起点・詳細: docs/design/s1-supabase.md・PR #45 |
+| S1 | S1-2 | 既存スプシデータをSupabaseにインポート | `chore` | ✅ 完了 | 🔴 | 未定 | 本番GAS API経由で移行・PR #46 |
+| S1 | S1-3 | GAS _apiInning等にSupabase書き込みを追加 | `feat` | ✅ 完了 | 🔴 | 未定 | スプシへの書き込みは残す・並行運用・PR #47 |
+| S1 | S1-4 | GAS createNewGame()にSupabase書き込みを追加 | `feat` | ✅ 完了 | 🔴 | 未定 | _apiCreateGameは現状ノーオペのためcreateNewGame()側に実装・PR #47 |
+| S1 | S1-5 | 動作確認（スプシとSupabaseの整合性チェック） | `chore` | ✅ 完了 | 🔴 | 未定 | OK=142 NG=0で確認済み・PR #48 |
 | S2 | S2-1 | チーム登録・ログイン機能追加 | `feat` | 💡 アイデア | 🟡 | 未定 | Supabase Auth活用 |
 | S2 | S2-2 | チームIDによるデータ分離（RLSポリシー） | `feat` | 💡 アイデア | 🟡 | 未定 | |
 | S2 | S2-3 | メンバー招待URL機能 | `feat` | 💡 アイデア | 🟡 | 未定 | |
