@@ -25,10 +25,11 @@ export type BatterResults = Record<string, BatterEntry>
 export type PitcherResults = Record<string, { code: string; pitcher: string }>
 export type RbiMap = Record<string, { rbi: number; runs: number; sb: number }>
 
+// 打点・得点・盗塁(rbiData)は回ごとではなく試合を通じた累計値のため、
+// AllInningData(回ごとの状態)には含めず、ゲーム単位で別管理する（RbiMap参照）
 export type InningState = {
   batterResults: BatterResults
   pitcherResults: PitcherResults
-  rbiData: RbiMap
 }
 
 export type AllInningData = Record<string, InningState>

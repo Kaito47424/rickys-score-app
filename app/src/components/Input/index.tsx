@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import type { GameInfo, RosterEntry, AllInningData, InningState, ModalTarget, PitcherRunStat, BatterEntry } from '../../types'
+import type { GameInfo, RosterEntry, AllInningData, InningState, ModalTarget, PitcherRunStat, BatterEntry, RbiMap } from '../../types'
 import { postToGas, postLogEdit } from '../../api/gas'
 import InningBar from './InningBar'
 import CodeModal from '../CodePicker'
@@ -16,12 +16,14 @@ type Props = {
   setSubmitted: React.Dispatch<React.SetStateAction<Set<string>>>
   pitcherStats: PitcherRunStat[]
   setPitcherStats: React.Dispatch<React.SetStateAction<PitcherRunStat[]>>
+  rbiData: RbiMap
+  setRbiData: React.Dispatch<React.SetStateAction<RbiMap>>
   onBack: () => void
   onMvpInput: () => void
 }
 
 function emptyInning(): InningState {
-  return { batterResults: {}, pitcherResults: {}, rbiData: {} }
+  return { batterResults: {}, pitcherResults: {} }
 }
 
 function getOrInit(data: AllInningData, key: string): InningState {
@@ -36,7 +38,7 @@ function normEntry(v: BatterEntry | string | undefined): BatterEntry {
 
 export default function InputMain({
   game, roster, setRoster, inningData, setInningData, submitted, setSubmitted,
-  pitcherStats, setPitcherStats, onBack, onMvpInput,
+  pitcherStats, setPitcherStats, rbiData, setRbiData, onBack, onMvpInput,
 }: Props) {
   const [inning, setInning] = useState(1)
   const [round, setRound] = useState<1 | 2>(1)
@@ -101,15 +103,13 @@ export default function InputMain({
     })
   }
 
+  // 打点・得点・盗塁は試合を通じた累計値（回ごとではない）ため、
+  // inningDataではなくゲーム単位のrbiDataを直接更新する
   const updateRbi = (order: number, field: 'rbi' | 'runs' | 'sb', delta: number) => {
-    setInningData(prev => {
-      const s = getOrInit(prev, key)
-      const existing = s.rbiData[String(order)] ?? { rbi: 0, runs: 0, sb: 0 }
+    setRbiData(prev => {
+      const existing = prev[String(order)] ?? { rbi: 0, runs: 0, sb: 0 }
       const next = Math.max(0, (existing[field] ?? 0) + delta)
-      return {
-        ...prev,
-        [key]: { ...s, rbiData: { ...s.rbiData, [String(order)]: { ...existing, [field]: next } } },
-      }
+      return { ...prev, [String(order)]: { ...existing, [field]: next } }
     })
   }
 
@@ -174,7 +174,7 @@ export default function InputMain({
         })),
         batterResults: current.batterResults,
         pitcherResults: current.pitcherResults,
-        rbiData: current.rbiData,
+        rbiData,
         pitcherStats,
       })
     } catch {
@@ -315,7 +315,7 @@ export default function InputMain({
 
           if (mainTab === 'batter') {
             const entry = normEntry(current.batterResults[orderStr])
-            const rbi = current.rbiData[orderStr] ?? { rbi: 0, runs: 0, sb: 0 }
+            const rbi = rbiData[orderStr] ?? { rbi: 0, runs: 0, sb: 0 }
             const isSubActive = r.subFromInning != null && r.subFromInning <= inning
             const displayName = isSubActive ? r.subName : r.name
             const showSubInput = subInputOrder === r.order

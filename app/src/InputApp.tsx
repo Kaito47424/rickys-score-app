@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { GameInfo, RosterEntry, AllInningData, Page, PitcherRunStat, BatterResults, BatterEntry } from './types'
+import type { GameInfo, RosterEntry, AllInningData, Page, PitcherRunStat, BatterResults, BatterEntry, RbiMap } from './types'
 import GameSelect from './components/GameSelect'
 import OrderEdit from './components/OrderEdit'
 import InputMain from './components/Input'
@@ -24,6 +24,7 @@ export default function InputApp() {
   const [inningData, setInningData] = useState<AllInningData>({})
   const [submitted, setSubmitted] = useState<Set<string>>(new Set())
   const [pitcherStats, setPitcherStats] = useState<PitcherRunStat[]>([])
+  const [rbiData, setRbiData] = useState<RbiMap>({})
   const [loadingGame, setLoadingGame] = useState(false)
   const [currentMvp, setCurrentMvp] = useState<{ name: string; reason: string } | null>(null)
 
@@ -32,6 +33,7 @@ export default function InputApp() {
     setInningData({})
     setSubmitted(new Set())
     setPitcherStats([])
+    setRbiData({})
 
     if (g.exists && g.gameId) {
       setLoadingGame(true)
@@ -51,7 +53,7 @@ export default function InputApp() {
         for (const [gasKey, orders] of Object.entries(data.batterResults ?? {})) {
           const hasData = Object.keys(orders).length > 0
           const feKey = gasKey.replace('_', '-')
-          if (!newInningData[feKey]) newInningData[feKey] = { batterResults: {}, pitcherResults: {}, rbiData: {} }
+          if (!newInningData[feKey]) newInningData[feKey] = { batterResults: {}, pitcherResults: {} }
           const normalized: BatterResults = {}
           for (const [o, val] of Object.entries(orders)) {
             if (typeof val === 'object' && val !== null) {
@@ -68,24 +70,17 @@ export default function InputApp() {
         for (const [gasKey, orders] of Object.entries(data.pitcherResults ?? {})) {
           const hasData = Object.keys(orders).length > 0
           const feKey = gasKey.replace('_', '-')
-          if (!newInningData[feKey]) newInningData[feKey] = { batterResults: {}, pitcherResults: {}, rbiData: {} }
+          if (!newInningData[feKey]) newInningData[feKey] = { batterResults: {}, pitcherResults: {} }
           const normalized: Record<string, { code: string; pitcher: string }> = {}
           for (const [o, v] of Object.entries(orders)) normalized[String(o)] = v
           newInningData[feKey].pitcherResults = normalized
           if (hasData) newSubmitted.add(feKey)
         }
 
-        const rbiSource = data.rbiData ?? {}
-        if (Object.values(rbiSource).some(v => v.rbi || v.runs || v.sb)) {
-          const target = newSubmitted.size > 0 ? [...newSubmitted][0] : '1-1'
-          if (!newInningData[target]) newInningData[target] = { batterResults: {}, pitcherResults: {}, rbiData: {} }
-          const normalizedRbi: Record<string, { rbi: number; runs: number; sb: number }> = {}
-          for (const [o, v] of Object.entries(rbiSource)) normalizedRbi[String(o)] = v
-          newInningData[target].rbiData = normalizedRbi
-        }
-
         setInningData(newInningData)
         setSubmitted(newSubmitted)
+        // 打点・得点・盗塁は試合を通じた累計値のため、回ごとではなくゲーム単位で保持する
+        setRbiData(data.rbiData ?? {})
         setPitcherStats(data.pitcherStats ?? [])
         setCurrentMvp(data.mvp ?? null)
       } catch {
@@ -157,6 +152,8 @@ export default function InputApp() {
           setSubmitted={setSubmitted}
           pitcherStats={pitcherStats}
           setPitcherStats={setPitcherStats}
+          rbiData={rbiData}
+          setRbiData={setRbiData}
           onBack={() => setPage('orderEdit')}
           onMvpInput={() => setPage('mvpInput')}
         />
