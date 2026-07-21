@@ -4,6 +4,7 @@ import ViewLayout from './components/ViewLayout'
 import StatsPage from './components/Stats'
 import GamesPage from './components/Games'
 import GameSummary from './components/GameSummary'
+import RankingPage from './components/Ranking'
 
 export default function App() {
   return (
@@ -12,6 +13,7 @@ export default function App() {
       <Route path="/view" element={<ViewLayout />}>
         <Route index element={<Navigate to="/view/stats" replace />} />
         <Route path="stats" element={<StatsPage />} />
+        <Route path="ranking" element={<RankingPage />} />
         <Route path="games" element={<GamesPage />} />
         <Route path="game/:gameId" element={<GameSummary />} />
       </Route>

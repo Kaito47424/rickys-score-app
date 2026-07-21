@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { BatStat, PitchStat } from '../../types'
+import type { BatStat, PitchStat, GameInfo } from '../../types'
 import { fetchBatStats, fetchPitchStats, fetchGames } from '../../api/gas'
+import { isQualifiedBatter, countTeamGames } from '../../utils/qualification'
 
 // 各試合ページ(GameSummary/index.tsx の BAT_COL_MAP/PIT_COL_MAP)と基本項目を揃えている
 const BAT_COLS  = [
@@ -43,6 +44,7 @@ export default function StatsPage() {
   const [batError, setBatError]     = useState('')
   const [pitchError, setPitchError] = useState('')
   const [yearFilter, setYearFilter] = useState<string>('all')
+  const [games, setGames] = useState<GameInfo[]>([])
   const [availableYears, setAvailableYears] = useState<string[]>([])
 
   useEffect(() => {
@@ -50,18 +52,14 @@ export default function StatsPage() {
   }, [])
 
   useEffect(() => {
-    if (yearFilter === 'all') {
-      loadBat()
-      loadPitch()
-    } else {
-      loadBat()
-      loadPitch()
-    }
+    loadBat()
+    loadPitch()
   }, [yearFilter])
 
   const loadGames = () => {
     fetchGames()
       .then(data => {
+        setGames(data)
         const years = new Set(data.map(g => g.gameDate.substring(0, 4)))
         setAvailableYears(['all', ...Array.from(years).sort().reverse()])
       })
@@ -92,14 +90,28 @@ export default function StatsPage() {
     if (t === 'pitch') loadPitch()
   }
 
+  const teamGames = useMemo(() => countTeamGames(games, yearFilter), [games, yearFilter])
+
+  // 野手タブ: 規定打席以上（既存順）→ 規定打席未満（既存順）の安定パーティション
+  const batRowsWithQualification = useMemo(() => {
+    return withBbHbp(batStats).map(r => ({
+      row: r,
+      qualified: isQualifiedBatter(Number(r['打席'] ?? 0), teamGames),
+    }))
+  }, [batStats, teamGames])
+
+  const qualifiedBatRows = batRowsWithQualification.filter(r => r.qualified).map(r => r.row)
+  const unqualifiedBatRows = batRowsWithQualification.filter(r => !r.qualified).map(r => r.row)
+
   const cols    = tab === 'bat' ? BAT_COLS : PIT_COLS
-  const rows    = tab === 'bat' ? withBbHbp(batStats) : pitchStats
   const loading = tab === 'bat' ? batLoading : pitchLoading
   const error   = tab === 'bat' ? batError : pitchError
+  const rowCount = tab === 'bat' ? batRowsWithQualification.length : pitchStats.length
 
   const bestValues = useMemo<Record<string, number>>(() => {
+    // 野手タブは規定打席以上の選手のみを対象にハイライト基準を算出する
     const currentCols = tab === 'bat' ? BAT_COLS : PIT_COLS
-    const currentRows = tab === 'bat' ? withBbHbp(batStats) : pitchStats
+    const currentRows = tab === 'bat' ? qualifiedBatRows : pitchStats
     if (currentRows.length === 0) return {}
     const result: Record<string, number> = {}
     for (const col of currentCols) {
@@ -111,7 +123,29 @@ export default function StatsPage() {
       result[col] = LOWER_IS_BETTER.has(col) ? Math.min(...nums) : Math.max(...nums)
     }
     return result
-  }, [tab, batStats, pitchStats])
+  }, [tab, qualifiedBatRows, pitchStats])
+
+  const renderRow = (row: BatStat | PitchStat, key: string, dimmed: boolean) => (
+    <tr key={key} className={dimmed ? 'bg-gray-50/50 text-gray-400' : 'bg-white'}>
+      {cols.map(c => {
+        const best = !dimmed && c !== '選手名' && bestValues[c] !== undefined && Number(row[c]) === bestValues[c]
+        return (
+          <td
+            key={c}
+            className={`px-3 py-2.5 border-b border-gray-100 whitespace-nowrap
+              ${c === '選手名'
+                ? `text-left font-medium sticky left-0 z-10 ${dimmed ? 'bg-gray-50/50 text-gray-400' : 'bg-white text-gray-800'}`
+                : best
+                  ? 'text-right font-bold text-yellow-700 bg-yellow-50'
+                  : 'text-right text-gray-600'
+              }`}
+          >
+            {fmt(row[c] as string | number, c)}
+          </td>
+        )
+      })}
+    </tr>
+  )
 
   return (
     <div className="flex flex-col h-full">
@@ -154,7 +188,7 @@ export default function StatsPage() {
           </div>
         ) : error ? (
           <p className="text-red-500 text-center py-16 px-4">{error}</p>
-        ) : rows.length === 0 ? (
+        ) : rowCount === 0 ? (
           <p className="text-gray-400 text-center py-16">データがありません</p>
         ) : (
           <div className="overflow-x-auto">
@@ -173,27 +207,21 @@ export default function StatsPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row, i) => (
-                  <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
-                    {cols.map(c => {
-                      const best = c !== '選手名' && bestValues[c] !== undefined && Number(row[c]) === bestValues[c]
-                      return (
-                        <td
-                          key={c}
-                          className={`px-3 py-2.5 border-b border-gray-100 whitespace-nowrap
-                            ${c === '選手名'
-                              ? 'text-left font-medium text-gray-800 sticky left-0 z-10 ' + (i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50')
-                              : best
-                                ? 'text-right font-bold text-yellow-700 bg-yellow-50'
-                                : 'text-right text-gray-600'
-                            }`}
-                        >
-                          {fmt(row[c] as string | number, c)}
+                {tab === 'bat' ? (
+                  <>
+                    {qualifiedBatRows.map((row, i) => renderRow(row, `q-${i}`, false))}
+                    {unqualifiedBatRows.length > 0 && (
+                      <tr>
+                        <td colSpan={cols.length} className="px-3 py-1.5 border-b border-gray-100 text-xs text-gray-400 bg-gray-50">
+                          規定打席未満（規定打席: {(teamGames * 2.1).toFixed(1)}）
                         </td>
-                      )
-                    })}
-                  </tr>
-                ))}
+                      </tr>
+                    )}
+                    {unqualifiedBatRows.map((row, i) => renderRow(row, `u-${i}`, true))}
+                  </>
+                ) : (
+                  pitchStats.map((row, i) => renderRow(row, `p-${i}`, false))
+                )}
               </tbody>
             </table>
           </div>
