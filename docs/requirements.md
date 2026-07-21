@@ -59,6 +59,10 @@
 | S1 | S1-3 | GAS _apiInning等にSupabase書き込みを追加 | `feat` | ✅ 完了 | 🔴 | 未定 | スプシへの書き込みは残す・並行運用・PR #47 |
 | S1 | S1-4 | GAS createNewGame()にSupabase書き込みを追加 | `feat` | ✅ 完了 | 🔴 | 未定 | _apiCreateGameは現状ノーオペのためcreateNewGame()側に実装・PR #47 |
 | S1 | S1-5 | 動作確認（スプシとSupabaseの整合性チェック） | `chore` | ✅ 完了 | 🔴 | 未定 | OK=142 NG=0で確認済み・PR #48 |
+| S1 | S1-6 | 並行運用の安定確認 | `chore` | 💡 アイデア | 🟡 | 未定 | 実試合でのミラー動作を一定期間観察・検証スクリプトで定期チェック |
+| S1 | S1-7 | 読み取り集計ロジックをSupabase向けに実装 | `feat` | 💡 アイデア | 🟡 | 未定 | 打率・OBP/SLG・走者あり/なし打率・POP・K%・MVP集計等。詳細: docs/design/s1-supabase.md |
+| S1 | S1-8 | GAS APIをVercel Serverless Functionsへ移植 | `refactor` | 💡 アイデア | 🟡 | 未定 | doGet/doPost全機能を移植、フロントの参照先を切替 |
+| S1 | S1-9 | GAS廃止・完全カットオーバー | `chore` | 💡 アイデア | 🟡 | 未定 | 最終ゴール: ブラウザ→Vercel→Supabaseのみの構成に |
 | S2 | S2-1 | チーム登録・ログイン機能追加 | `feat` | 💡 アイデア | 🟡 | 未定 | Supabase Auth活用 |
 | S2 | S2-2 | チームIDによるデータ分離（RLSポリシー） | `feat` | 💡 アイデア | 🟡 | 未定 | |
 | S2 | S2-3 | メンバー招待URL機能 | `feat` | 💡 アイデア | 🟡 | 未定 | |
