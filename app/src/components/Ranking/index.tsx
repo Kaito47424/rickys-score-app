@@ -133,6 +133,7 @@ export default function RankingPage() {
 
   // 野手
   const avgRanking = useMemo(() => buildRanking(qualifiedBatters, r => Number(r['打率'] ?? 0), fmt3), [qualifiedBatters])
+  const obpRanking = useMemo(() => buildRanking(qualifiedBatters, r => Number(r['出塁率(OBP)'] ?? 0), fmt3), [qualifiedBatters])
   const hitRanking = useMemo(() => buildRanking(batStats.filter(r => Number(r['安打'] ?? 0) > 0), r => Number(r['安打'] ?? 0), fmtInt), [batStats])
   const hrRanking = useMemo(() => buildRanking(batStats.filter(r => Number(r['本塁打'] ?? 0) > 0), r => Number(r['本塁打'] ?? 0), fmtInt), [batStats])
   const rbiRanking = useMemo(() => buildRanking(batStats.filter(r => Number(r['打点'] ?? 0) > 0), r => Number(r['打点'] ?? 0), fmtInt), [batStats])
@@ -187,6 +188,7 @@ export default function RankingPage() {
           <>
             <RankingSection title="野手ランキング">
               <RankingCard title={`打率ランキング（規定打席${(teamGames * 2.1).toFixed(1)}以上）`} entries={avgRanking} />
+              <RankingCard title={`出塁率ランキング（規定打席${(teamGames * 2.1).toFixed(1)}以上）`} entries={obpRanking} />
               <RankingCard title="最多安打ランキング" entries={hitRanking} />
               <RankingCard title="本塁打ランキング" entries={hrRanking} />
               <RankingCard title="打点ランキング" entries={rbiRanking} />
