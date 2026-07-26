@@ -5,7 +5,7 @@ import InningBar from './InningBar'
 import CodeModal from '../CodePicker'
 import PitcherModal from './PitcherModal'
 import RunCodeModal from './RunCodeModal'
-import { outsForCode } from '../../constants/codes'
+import { outsForCode, outsForBatterEntry } from '../../constants/codes'
 
 type Props = {
   game: GameInfo
@@ -71,6 +71,10 @@ export default function InputMain({
   const outsInInning =
     Object.values(getOrInit(inningData, `${inning}-1`).pitcherResults).reduce((sum, r) => sum + outsForCode(r.code), 0) +
     Object.values(getOrInit(inningData, `${inning}-2`).pitcherResults).reduce((sum, r) => sum + outsForCode(r.code), 0)
+
+  const outsInInningBatter =
+    Object.values(getOrInit(inningData, `${inning}-1`).batterResults).reduce((sum, r) => sum + outsForBatterEntry(normEntry(r)), 0) +
+    Object.values(getOrInit(inningData, `${inning}-2`).batterResults).reduce((sum, r) => sum + outsForBatterEntry(normEntry(r)), 0)
 
   const goToNextInning = () => {
     setInning(i => i + 1)
@@ -252,6 +256,28 @@ export default function InputMain({
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-2 pb-24">
+        {mainTab === 'batter' && (
+          <div className={`rounded-xl shadow-sm border p-3 flex items-center justify-between
+            ${outsInInningBatter >= 3 ? 'bg-red-50 border-red-200' : 'bg-white border-gray-100'}`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-gray-500">{inning}回 アウトカウント</span>
+              <span className={`text-lg font-bold ${outsInInningBatter >= 3 ? 'text-red-600' : 'text-gray-800'}`}>
+                {Math.min(outsInInningBatter, 3)}
+              </span>
+              <span className="text-xs text-gray-400">/ 3</span>
+            </div>
+            {outsInInningBatter >= 3 && (
+              <button
+                onClick={goToNextInning}
+                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-600 text-white active:bg-red-700"
+              >
+                3アウト → {inning + 1}回へ
+              </button>
+            )}
+          </div>
+        )}
+
         {mainTab === 'pitcher' && (
           <div className={`rounded-xl shadow-sm border p-3 flex items-center justify-between
             ${outsInInning >= 3 ? 'bg-red-50 border-red-200' : 'bg-white border-gray-100'}`}
